@@ -1,19 +1,42 @@
+using Application.Interfaces;
+using Application.Services;
+using Microsoft.OpenApi;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+// Add services
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "AI Incident API",
+        Version = "v1",
+        Description = "API for incident classification (manual vs AI)"
+    });
+});
+
+
+// DI (din egen)
+builder.Services.AddSingleton<IIncidentRepository, InMemoryIncidentRepository>();
+builder.Services.AddSingleton<IAiGateway, AiGateway>();
+builder.Services.AddScoped<IncidentService>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Swagger (viktigt)
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+app.UseAuthorization();
 
+app.MapControllers();
 
 app.Run();
-

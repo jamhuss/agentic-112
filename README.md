@@ -38,6 +38,32 @@ Output:
 
 ---
 
+## File structure
+
+/server
+  /Api
+    Controllers/
+      IncidentsController.cs
+  /Application
+    Services/
+      IncidentService.cs
+    Interfaces/
+      IAiGateway.cs
+      IIncidentRepository.cs
+  /Domain
+    Entities/
+      Incident.cs
+    Models/
+      IncidentAnalysis.cs
+  /Infrastructure
+    AI/
+      AiGateway.cs
+    Persistence/
+      InMemoryIncidentRepository.cs
+  Program.cs
+
+---
+
 ## Constraints
 
 AI must:
