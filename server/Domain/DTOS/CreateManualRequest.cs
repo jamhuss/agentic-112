@@ -9,3 +9,10 @@ public record CreateManualRequest(
 public record CreateAiRequest(
     string Description
 );
+
+public record UpdateIncidentRequest(
+    string? Description,
+    List<string>? Services,
+    string? Priority,
+    string? Status
+);

@@ -43,4 +43,19 @@ public class IncidentsController : ControllerBase
         var list = await _repo.GetAllAsync();
         return Ok(list);
     }
+
+    [HttpPatch("{id:guid}")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateIncidentRequest request)
+    {
+        var incident = await _repo.GetByIdAsync(id);
+        if (incident is null) return NotFound();
+
+        if (request.Description is not null) incident.Description = request.Description;
+        if (request.Services is not null) incident.Services = request.Services;
+        if (request.Priority is not null) incident.Priority = request.Priority;
+        if (request.Status is not null) incident.Status = request.Status;
+
+        await _repo.UpdateAsync(incident);
+        return Ok(incident);
+    }
 }

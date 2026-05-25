@@ -7,6 +7,7 @@ public class Incident
     public List<string> Services { get; set; } = new();
     public string Priority { get; set; } = "";
     public string CreatedBy { get; set; } = "User";
+    public string Status { get; set; } = "ongoing";
     public double? Confidence { get; set; }
     public string? Credibility { get; set; }
     public bool? NeedsHumanReview { get; set; }

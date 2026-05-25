@@ -3,6 +3,7 @@ export interface Incident {
   description: string;
   services: string[];
   priority: string;
+  status: string;
   createdBy: string;
   confidence?: number;
   credibility?: string;
@@ -14,4 +15,11 @@ export interface CreateManualRequest {
   description: string;
   services: string[];
   priority: string;
+}
+
+export interface UpdateIncidentRequest {
+  description?: string;
+  services?: string[];
+  priority?: string;
+  status?: string;
 }

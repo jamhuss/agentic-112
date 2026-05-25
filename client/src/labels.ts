@@ -11,3 +11,8 @@ export const PRIORITY_LABELS: Record<string, string> = {
   medium: "Medel",
   low: "Låg",
 };
+
+export const STATUS_LABELS: Record<string, string> = {
+  ongoing: "Pågående",
+  closed: "Avslutat",
+};

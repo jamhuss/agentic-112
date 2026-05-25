@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
-import { fetchIncidents, createManualIncident } from "./api";
-import type { Incident, CreateManualRequest } from "./types";
+import { fetchIncidents, createManualIncident, updateIncident } from "./api";
+import type { Incident, CreateManualRequest, UpdateIncidentRequest } from "./types";
 import { IncidentList } from "./components/IncidentList";
 import { CreateIncidentModal } from "./components/CreateIncidentModal";
+import { EditIncidentModal } from "./components/EditIncidentModal";
 import "./App.css";
 
 function App() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingIncident, setEditingIncident] = useState<Incident | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function loadIncidents() {
@@ -30,6 +32,11 @@ function App() {
     await loadIncidents();
   }
 
+  async function handleUpdate(id: string, request: UpdateIncidentRequest) {
+    await updateIncident(id, request);
+    await loadIncidents();
+  }
+
   return (
     <div className="app">
       <header className="app-header">
@@ -40,13 +47,24 @@ function App() {
       </header>
 
       <main>
-        {loading ? <p>Laddar...</p> : <IncidentList incidents={incidents} />}
+        {loading ? (
+          <p>Laddar...</p>
+        ) : (
+          <IncidentList incidents={incidents} onEdit={setEditingIncident} />
+        )}
       </main>
 
       <CreateIncidentModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSubmit={handleCreate}
+      />
+
+      <EditIncidentModal
+        key={editingIncident?.id}
+        incident={editingIncident}
+        onClose={() => setEditingIncident(null)}
+        onSubmit={handleUpdate}
       />
     </div>
   );

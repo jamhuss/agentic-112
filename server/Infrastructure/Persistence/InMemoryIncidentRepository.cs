@@ -15,4 +15,17 @@ public class InMemoryIncidentRepository : IIncidentRepository
     {
         return Task.FromResult(_storage);
     }
+
+    public Task<Incident?> GetByIdAsync(Guid id)
+    {
+        var incident = _storage.FirstOrDefault(i => i.Id == id);
+        return Task.FromResult(incident);
+    }
+
+    public Task UpdateAsync(Incident incident)
+    {
+        var index = _storage.FindIndex(i => i.Id == incident.Id);
+        if (index >= 0) _storage[index] = incident;
+        return Task.CompletedTask;
+    }
 }

@@ -1,4 +1,4 @@
-import type { CreateManualRequest, Incident } from "./types";
+import type { CreateManualRequest, Incident, UpdateIncidentRequest } from "./types";
 
 const API_BASE = "/api/incidents";
 
@@ -17,5 +17,18 @@ export async function createManualIncident(
     body: JSON.stringify(request),
   });
   if (!res.ok) throw new Error("Failed to create incident");
+  return res.json();
+}
+
+export async function updateIncident(
+  id: string,
+  request: UpdateIncidentRequest
+): Promise<Incident> {
+  const res = await fetch(`${API_BASE}/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+  if (!res.ok) throw new Error("Failed to update incident");
   return res.json();
 }
