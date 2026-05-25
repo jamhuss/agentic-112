@@ -10,7 +10,7 @@ public class AiGateway : IAiGateway
         // Fake response for now
         var result = new IncidentAnalysis(
             Services: new List<string> { "Ambulans" },
-            Priority: "Hög",
+            Priority: "High",
             Confidence: 0.85,
             Credibility: "Medium",
             NeedsHumanReview: false,

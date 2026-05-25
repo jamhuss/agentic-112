@@ -322,13 +322,78 @@ Open browser: `https://localhost:xxxx/swagger`
 
 You now have:
 
-- Working backend
-- Swagger UI
-- Manual + AI endpoints
-- Clean architecture
+- Working backend with Swagger UI
+- Manual + AI incident creation endpoints
+- PATCH endpoint for updating incidents
+- Clean architecture (Api / Application / Domain / Infrastructure)
 
 ---
 
-## Next Step
+## Frontend Setup (React + Vite)
 
-Replace fake AI with real AI integration (prompt + JSON parsing).
+### Step 16 – Create Frontend Project
+
+From root:
+
+```bash
+npm create vite@latest client -- --template react-ts
+cd client
+npm install
+```
+
+### Step 17 – Configure Vite Proxy
+
+**File:** `client/vite.config.ts`
+
+```typescript
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 3000,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5236',
+        changeOrigin: true,
+      },
+    },
+  },
+})
+```
+
+### Step 18 – Run Both
+
+```bash
+# Terminal 1 — Backend
+cd server
+dotnet run
+# → http://localhost:5236/swagger
+
+# Terminal 2 — Frontend
+cd client
+npm run dev
+# → http://localhost:3000
+```
+
+---
+
+## Current State
+
+The project now has:
+
+- Backend: manual + AI incident creation, edit, list
+- Frontend: incident list (tabell), create modal (manuellt + agentic), edit modal
+- Vite proxy eliminates CORS in development
+- Swedish labels in frontend (Ambulans, Polis, Räddningstjänst, etc.)
+
+---
+
+## Next Steps
+
+See [MASTER_PLAN.md](MASTER_PLAN.md) for the full roadmap:
+
+1. **Fas 1** — PipelineStep model, trådsäker repository, CORS, buggfixar
+2. **Fas 2** — Tvåstegsflöde (klassificering + trovärdighetskontroll)
+3. **Fas 3** — Fake CredibilityGateway
+4. **Fas 4** — Frontend kortvy med pipeline-visualisering
+5. **Fas 5** — Riktig AI (Microsoft.Extensions.AI + Azure OpenAI)
+6. **Fas 6** — Produktion (retry, loggning, DB)

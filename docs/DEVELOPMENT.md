@@ -2,25 +2,35 @@
 
 ## Architecture
 
-We are building a backend system with AI as a component.
+Clean architecture backend with AI as a two-step pipeline component, and a React frontend.
 
-Structure:
+### Backend structure (`/server`)
 
-- Api → Controllers
-- Application → Business logic
-- Domain → Core models
-- Infrastructure → AI + persistence
+- **Api** → Controllers (HTTP endpoints, no business logic)
+- **Application** → Services + interfaces (business logic, orchestration)
+- **Domain** → Entities, models, DTOs, constants (no dependencies)
+- **Infrastructure** → AI gateways + persistence (implementation details)
+
+### Frontend structure (`/client`)
+
+- React + TypeScript + Vite
+- Proxy `/api` → backend at `http://localhost:5236`
+- Kortvy med pipeline-visualisering per ärende
 
 ---
 
 ## Core Rule
 
-All incident creation must result in the SAME entity.
+All incident creation must result in the SAME `Incident` entity.
 
 There are two sources:
 
-1. Manual (user-defined)
-2. AI (model-generated)
+1. **Manual** (user-defined services, priority)
+2. **AI** (model-classified from free text)
+
+Both flows pass through a **two-step pipeline**:
+1. **Klassificering** (AI only) — `IAiGateway.AnalyzeAsync()` → services, priority, confidence
+2. **Trovärdighetskontroll** (alla ärenden) — `ICredibilityGateway.AssessAsync()` → credibility, needsHumanReview
 
 ---
 
@@ -29,74 +39,122 @@ There are two sources:
 All flows produce:
 
 - Description
-- Services (must be from predefined list)
-- Priority
-- CreatedBy ("User" or "AI")
+- Services (must be from `IncidentConstants.Services`)
+- Priority (must be from `IncidentConstants.Priorities`)
+- Status (`pending_review` → `ongoing` / `flagged` → `rejected` / `closed`)
+- CreatedBy (`"User"` or `"AI"`)
+- Steps (`List<PipelineStep>` — audit trail)
 
-AI adds:
-- Confidence
-- Credibility
+AI-klassificering lägger till:
+- Confidence (0.0–1.0, nullable — null för manuella)
+
+Trovärdighetskontroll lägger till:
+- Credibility (`high` / `medium` / `low`)
 - NeedsHumanReview
 
 ---
 
-## AI Integration
+## Pipeline Steps (PipelineStep)
 
-The system uses a single abstraction:
+Varje steg i pipelinen loggas som en `PipelineStep`:
 
-IAiGateway
+| Fält | Beskrivning |
+|------|-------------|
+| `Name` | `"classification"` eller `"credibility_check"` |
+| `Result` | Sammanfattning av stegets output |
+| `Reasoning` | AI:ns motivering i fritext |
+| `Timestamp` | När steget kördes |
 
-Responsibilities:
-- Build prompt
-- Call LLM
-- Return structured JSON
+---
+
+## Status Lifecycle
+
+```
+pending_review → ongoing     (trovärdig)
+pending_review → flagged     (låg trovärdighet / AI-fel)
+flagged        → ongoing     (operatör godkänner)
+flagged        → rejected    (operatör avvisar)
+ongoing        → closed      (ärende avslutat)
+```
+
+---
+
+## AI Integration — Two Gateways
+
+### IAiGateway (klassificering)
+
+Ansvar:
+- Analysera fritext
+- Returnera `IncidentAnalysis` (services, priority, confidence, reasoning)
+- Returnerar **aldrig** credibility (det är ett separat steg)
+
+### ICredibilityGateway (trovärdighetsbedömning)
+
+Ansvar:
+- Bedöma trovärdigheten i ett ärende
+- Returnera `CredibilityAssessment` (credibility, needsHumanReview, reasoning)
+- Körs på **alla** ärenden (manuella + AI)
 
 ---
 
 ## AI Constraints
 
-The AI MUST:
+AI:n MÅSTE:
 
-- Only use allowed services:
-  - Ambulance
-  - Police
-  - Fire_Department
-  - Assistance
-
-- Never invent new services
-- Always return structured JSON
-- Never return free text
+- Bara använda tillåtna services: `ambulance`, `police`, `fire_department`, `assistance`
+- Bara använda tillåtna priorities: `critical`, `high`, `medium`, `low`
+- Alltid returnera structured JSON
+- Aldrig returnera fritext istället för JSON
+- Aldrig hitta på nya tjänster eller prioriteter
 
 ---
 
 ## Validation Rules
 
-All AI responses must be validated:
+Alla AI-svar måste valideras:
 
-- Services must exist in allowed list
-- Priority must be known value
-- If invalid → reject or fallback
+- Services måste finnas i `IncidentConstants.Services`
+- Priority måste finnas i `IncidentConstants.Priorities`
+- Credibility måste finnas i `IncidentConstants.CredibilityLevels`
+- Status vid PATCH måste finnas i `IncidentConstants.Statuses`
+- Om validering misslyckas → retry 1x → fallback till `flagged` + `needsHumanReview = true`
 
 ---
 
-## Development Strategy
+## Statuslogik
 
-1. Start with fake AI responses
-2. Build full flow
-3. Replace with real LLM
+| Credibility | Confidence | → Status | → NeedsHumanReview |
+|-------------|-----------|----------|---------------------|
+| `high` | any | `ongoing` | `false` |
+| `medium` | ≥ 0.6 | `ongoing` | `false` |
+| `medium` | < 0.6 | `flagged` | `true` |
+| `low` | any | `flagged` | `true` |
+
+> Manuella ärenden har `Confidence = null`. Behandla null som 1.0.
 
 ---
 
 ## Coding Rules
 
-- No business logic in controllers
-- AI calls only via IAiGateway
-- No direct model calls in services
-- Keep models simple and explicit
+- Ingen business logic i controllers
+- AI-anrop bara via `IAiGateway` / `ICredibilityGateway`
+- Inga direkta LLM-anrop i services
+- Alla modeller enkla och explicita
+- Constants centraliserade i `IncidentConstants`
+- Frontend hämtar constants från `GET /api/constants` (inte hårdkodade)
+- InMemoryRepository måste vara trådsäker (lock/concurrent)
 
 ---
 
-## Goal
+## Development Strategy
+
+1. ~~Fake AI-svar~~ ✅ (befintlig AiGateway)
+2. Tvåstegsflöde med fake CredibilityGateway
+3. Frontend med kortvy och pipeline-visualisering
+4. Riktig AI med `Microsoft.Extensions.AI` + Azure OpenAI
+5. Produktionsredo: retry, loggning, felhantering
+
+Se [MASTER_PLAN.md](MASTER_PLAN.md) för detaljerad fasplan.
 
 The goal is NOT:
 - to build the smartest AI

@@ -16,6 +16,11 @@
   font-size: 1.5rem;
 }
 
+.app-header .buttons {
+  display: flex;
+  gap: 0.75rem;
+}
+
 /* Buttons */
 .btn-primary {
   background: #2563eb;

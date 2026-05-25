@@ -20,6 +20,18 @@ export async function createManualIncident(
   return res.json();
 }
 
+export async function createAgenticIncident(
+  request: CreateManualRequest
+): Promise<Incident> {
+  const res = await fetch(`${API_BASE}/ai`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+  if (!res.ok) throw new Error("Failed to create incident");
+  return res.json();
+}
+
 export async function updateIncident(
   id: string,
   request: UpdateIncidentRequest

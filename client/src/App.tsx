@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchIncidents, createManualIncident, updateIncident } from "./api";
+import { fetchIncidents, createManualIncident, updateIncident, createAgenticIncident } from "./api";
 import type { Incident, CreateManualRequest, UpdateIncidentRequest } from "./types";
 import { IncidentList } from "./components/IncidentList";
 import { CreateIncidentModal } from "./components/CreateIncidentModal";
@@ -11,6 +11,7 @@ function App() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingIncident, setEditingIncident] = useState<Incident | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAgentic, setIsAgentic] = useState(false);
 
   async function loadIncidents() {
     try {
@@ -28,7 +29,7 @@ function App() {
   }, []);
 
   async function handleCreate(request: CreateManualRequest) {
-    await createManualIncident(request);
+    await (isAgentic ? createAgenticIncident(request) : createManualIncident(request));
     await loadIncidents();
   }
 
@@ -41,9 +42,14 @@ function App() {
     <div className="app">
       <header className="app-header">
         <h1>Ärenden</h1>
-        <button className="btn-primary" onClick={() => setModalOpen(true)}>
+       <div className="buttons">
+         <button className="btn-primary" onClick={() => setModalOpen(true)}>
           + Nytt ärende
         </button>
+         <button className="btn-primary" onClick={() => { setIsAgentic(true); setModalOpen(true); } }>
+          + Nytt agentic ärende
+         </button>
+       </div>
       </header>
 
       <main>
@@ -58,6 +64,7 @@ function App() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSubmit={handleCreate}
+        isAgentic={isAgentic}
       />
 
       <EditIncidentModal
