@@ -58,34 +58,35 @@ builder.Services.AddSingleton<ICredibilityGateway, CredibilityGateway>();
 2. Klistra in: *"Det brinner kraftigt i en lägenhet på Drottninggatan 14, tredje våningen. Jag ser lågor och svart rök ur fönstren. Flera personer skriker från balkongen."*
 3. Välj tjänster: **bara Polis + Ambulans** (medvetet fel)
 4. Prioritet: **Hög** (inte kritisk – också lite fel)
-5. Klicka Spara → visa "Analyserar..."
+5. Klicka Spara
 
-> "Nu händer det saker i backend. Mina val skickas till AI:n som kontext – inte som sanning. AI:n klassificerar själv OCH granskar mina val."
+> "Ärendet sparas direkt med mina val. Ingen AI har rört det. Det här är det traditionella flödet – systemet litar blint på operatören."
+
+**Klicka Redigera på det nya ärendet, sedan "Validera med AI":**
+
+> "Nu ber jag explicit AI:n att granska mina val. Det här är operatörens beslut – inte systemets."
 
 **När resultatet kommer, peka på kortet:**
 
-> "Titta här – AI:n har lagt till `fire_department` som jag missade. Den har höjt prioriteten till `critical`. Och i reasoning står det: 'Brand med personer i fara kräver räddningstjänst. Operatören valde enbart polis och ambulans, men fire_department är kritiskt i detta scenario.'"
+> "Titta – AI:n har korrigerat mina val. Räddningstjänst har lagts till, prioriteten höjts till critical. Reasoning säger kort: 'Brand kräver räddningstjänst. Prioritet korrigerad från high till critical.' Ärendet är flaggat – det kräver min bekräftelse."
 
-> "Det här är partiell AI. Operatören gör sin bedömning – AI:n fungerar som en second opinion som fångar upp misstag."
+> "Det här är partiell AI. Operatören gör sin bedömning – och väljer själv när AI:n ska kvalitetssäkra."
 
-### Visa kod: `IncidentService.CreateManualAsync`
+### Visa kod: `IncidentService.ValidateAsync`
 
 ```csharp
-var analysis = await _ai.AnalyzeAsync(description, services); // ← user services som kontext
+var analysis = await _ai.AnalyzeAsync(incident.Description, incident.Services, incident.Priority);
 
-incident.Services = analysis.Services;   // AI:ns klassificering vinner
-incident.Priority = analysis.Priority;
-incident.Confidence = analysis.Confidence;
+// Korrigera vid avvikelse
+if (!priorityMatch) incident.Priority = analysis.Priority;
+if (!servicesMatch) incident.Services = analysis.Services;
 ```
 
-> "Operatörens valda tjänster skickas med till prompten, men AI:ns klassificering avgör slutresultatet. Det här är ett designval – man kan lika gärna göra tvärtom och bara visa en varning."
+> "AI:n får med operatörens val som kontext – men AI:ns klassificering avgör slutresultatet. Och reasoning förklarar vad som ändrades och varför."
 
 ### Visa kod: `ClassificationPrompt.cs`
 
-> "Så här ser prompten ut – system prompt med tydliga regler och en JSON Schema."
-
-**Peka på prompten:**
-> "Notera sista regeln: 'Om operatörens valda tjänster anges: granska om de är korrekta och tillräckliga. Påpeka i reasoning om kritiska tjänster saknas.' Det här ger oss audit trail – vi vet varför AI:n ändrade."
+> "Notera reasoning-stilen i prompten – kort vid OK, längre vid avvikelse. Och regeln om orealistiska scenarion."
 
 ### Visa kod: Structured Outputs
 
@@ -93,7 +94,7 @@ incident.Confidence = analysis.Confidence;
 ResponseFormat = ChatResponseFormat.ForJsonSchema(SchemaElement, "classification")
 ```
 
-> "Det här är nyckeln – Structured Outputs. Vi skickar ett JSON Schema till GPT-4o och modellen MÅSTE svara i det formatet. Ingen regex-parsing, ingen 'hoppas att JSON:en stämmer'. Om schemat säger att `priority` ska vara en enum med fyra värden – ja, då får vi ett av de fyra värdena."
+> "Structured Outputs – JSON Schema tvingar GPT-4o att svara i exakt format. Inga regex-hack."
 
 ### Visa kod: `AiResponseValidator.ValidateClassification`
 
@@ -156,30 +157,35 @@ ResponseFormat = ChatResponseFormat.ForJsonSchema(SchemaElement, "classification
 
 ## DEL 5 – Live: Omvärdering vid redigering (5 min)
 
-> "Sista nivån – vad händer när information uppdateras?"
+> "Sista nivån – vad händer när man korrigerar ett falskt AI-ärende?"
 
 **Gör:**
-1. Klicka Redigera på ett befintligt ärende
-2. Ändra beskrivningen till något annat
-3. Klicka Spara → visa "Analyserar..."
+1. Visa det flaggade drake-ärendet från del 4
+2. Klicka Redigera
+3. Ändra beskrivningen till en riktig nödsituation
+4. Klicka Spara → visa "Analyserar..."
 
-> "Nu körs hela pipelinen om – klassificering OCH trovärdighet. Titta: `createdBy` har flippat till 'User'. Gamla pipeline-steg är borta, nya har genererats."
+> "Eftersom det var ett AI-ärende och jag ändrade beskrivningen körs pipelinen om automatiskt. Det här skiljer sig från manuella ärenden – där måste operatören explicit trycka Validera."
+
+**Visa resultatet:**
+
+> "Nya steg: validering OK, trovärdighet high, status ongoing. `createdBy` har flippat till 'User'. Ärendet är korrigerat."
 
 ### Visa kod: Controller
 
 ```csharp
-// Content edit → reclassify via AI pipeline
-if (request.Description is not null)
+var wasAiCreated = incident.CreatedBy == "AI";
+var descriptionChanged = request.Description != incident.Description;
+
+// AI-ärende med ändrad beskrivning → kör om pipeline automatiskt
+if (wasAiCreated && descriptionChanged)
 {
-    var result = await _service.ReclassifyAsync(incident, request.Description, request.Services);
+    var result = await _service.ValidateAsync(incident);
     return Ok(result);
 }
-
-// Status-only update (approve/reject)
-if (request.Status is not null) incident.Status = request.Status;
 ```
 
-> "Det är samma PATCH-endpoint men med en branch: om description ändras → kör pipeline. Om bara status ändras (godkänn/avvisa) → enkel uppdatering. AI:n sitter inte i vägen för enkla operationer."
+> "Det är samma PATCH-endpoint men med en branch: AI-ärende + ny beskrivning → kör pipeline. Allt annat → enkel manuell uppdatering. AI:n sitter inte i vägen för enkla operationer."
 
 ---
 

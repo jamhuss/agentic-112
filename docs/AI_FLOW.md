@@ -47,13 +47,55 @@ sequenceDiagram
 
 ## Manuellt ärende (POST /api/incidents/manual)
 
-Samma flöde men **utan Steg 1** (klassificering):
-
-1. Användaren väljer tjänster + prioritet själv
+1. Användaren väljer tjänster + prioritet + skriver beskrivning
 2. `POST /api/incidents/manual` → `CreateManualAsync(description, services, priority)`
-3. Incident skapas med `CreatedBy: "User"`, `Confidence: null`
-4. **Hoppar direkt till Steg 2** (trovärdighetskontroll)
-5. Status bestäms: null confidence behandlas som 1.0 → bara credibility avgör
+3. Incident sparas direkt med `CreatedBy: "User"`, inga AI-steg
+4. Ingen automatisk klassificering eller trovärdighetskontroll
+5. Operatören kan sedan trycka "Validera med AI" i edit-vyn
+
+---
+
+## Explicit AI-validering (POST /api/incidents/{id}/validate)
+
+```mermaid
+sequenceDiagram
+    participant U as Operatör
+    participant FE as Frontend
+    participant API as Controller
+    participant SVC as IncidentService
+    participant AI as AiGateway (GPT-4o)
+    participant CRED as CredibilityGateway (GPT-4o)
+    participant DB as Repository
+
+    U->>FE: Klickar "Validera med AI"
+    FE->>API: POST /api/incidents/{id}/validate
+    API->>SVC: ValidateAsync(incident)
+    
+    Note over SVC,AI: Klassificering + granskning
+    SVC->>AI: AnalyzeAsync(description, userServices, userPriority)
+    AI-->>SVC: IncidentAnalysis (AI:ns förslag)
+    
+    SVC->>SVC: Jämför tjänster + prioritet
+    SVC->>SVC: Korrigerar vid avvikelse
+    SVC->>SVC: Lägger till PipelineStep("classification_validation")
+    
+    Note over SVC,CRED: Trovärdighetskontroll
+    SVC->>CRED: AssessAsync(description, services, priority, createdBy)
+    CRED-->>SVC: CredibilityAssessment
+    
+    SVC->>SVC: Flaggar om trovärdighet är låg/medium eller val avvek
+    SVC->>DB: UpdateAsync(incident)
+    SVC-->>API: Incident (uppdaterad)
+    API-->>FE: 200 OK
+    FE->>FE: Uppdaterar kort med nya pipeline-steg
+```
+
+---
+
+## Redigering av AI-ärende (PATCH med ny beskrivning)
+
+Om ett AI-skapat ärende redigeras med ny beskrivning körs hela valideringspipelinen om automatiskt.
+Detta hanterar scenariot där ett falskt AI-ärende korrigeras till en riktig beskrivning.
 
 ---
 
