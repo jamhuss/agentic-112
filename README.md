@@ -1,73 +1,58 @@
-# AI Incident Classification System
+# Agentic-112 — AI Incident Classification System
 
 ## Purpose
-This project demonstrates the difference between:
 
-- Traditional incident creation (manual input)
-- AI-driven incident classification (agentic flow)
+Ärendehanteringssystem för nödsituationer med **tvåstegs AI-pipeline**:
+1. **Klassificering** — AI kategoriserar fritext till tjänster + prioritet
+2. **Trovärdighetsbedömning** — Alla ärenden bedöms för trovärdighet
 
-## Key Idea
-Users simulate emergency operators.
+Varje pipeline-steg loggas och visualiseras transparent i frontenden.
 
-Two flows exist:
+## Flöden
 
-### Manual
-User selects:
-- services
-- priority
+### Manuellt
+Användare anger tjänster + prioritet manuellt → trovärdighetskontroll körs automatiskt.
 
-### AI
-User provides free-text:
-- system uses AI to classify incident
-- system assigns priority and credibility
+### AI (Agentic)
+Användare skriver fritext → AI klassificerar → trovärdighetskontroll körs automatiskt.
 
----
+## Statuslivscykel
 
-## Example
+```
+pending_review → ongoing     (trovärdig)
+pending_review → flagged     (låg trovärdighet / AI-fel)
+flagged        → ongoing     (operatör godkänner)
+flagged        → rejected    (operatör avvisar)
+ongoing        → closed      (ärende avslutat)
+```
 
-Input:
-"en person andas inte"
+## Tech stack
 
-Output:
-{
-  "services": ["Ambulance"],
-  "priority": "Critical",
-  "credibility": "High",
-  "confidence": 0.92
-}
+| Lager | Teknik |
+|-------|--------|
+| Backend | .NET 10 Web API, Clean Architecture |
+| Frontend | React + TypeScript + Vite |
+| AI (nuvarande) | Fake keyword-baserad implementation |
+| AI (planerad) | Microsoft.Extensions.AI + Azure OpenAI GPT-4o |
 
----
+## Kom igång
 
-## File structure
+```bash
+# Backend
+cd server
+dotnet run
+# → http://localhost:5236/swagger
 
-/server
-  /Api
-    Controllers/
-      IncidentsController.cs
-  /Application
-    Services/
-      IncidentService.cs
-    Interfaces/
-      IAiGateway.cs
-      IIncidentRepository.cs
-  /Domain
-    Entities/
-      Incident.cs
-    Models/
-      IncidentAnalysis.cs
-  /Infrastructure
-    AI/
-      AiGateway.cs
-    Persistence/
-      InMemoryIncidentRepository.cs
-  Program.cs
+# Frontend
+cd client
+npm install
+npm run dev
+# → http://localhost:3000
+```
 
----
+## Dokumentation
 
-## Constraints
-
-AI must:
-- ONLY use predefined services
-- return structured JSON
-- never invent categories
-``
+- [docs/MASTER_PLAN.md](docs/MASTER_PLAN.md) — Fasindelad plan med status
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) — Arkitektur och riktlinjer
+- [docs/AI_BEHAVIOR.md](docs/AI_BEHAVIOR.md) — AI-beteende och regler
+- [docs/PROJECT_SETUP.md](docs/PROJECT_SETUP.md) — Setup-guide

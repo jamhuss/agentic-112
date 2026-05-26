@@ -6,38 +6,37 @@ Ett ärendehanteringssystem för nödsituationer med **tvåstegs AI-pipeline**: 
 
 ---
 
-## Nuläge (exakt kodtillstånd)
+## Nuläge (uppdaterat 2026-05-26)
 
-> Punkter markerade med **Saknar/Behöver** beskriver vad som saknas i koden idag och åtgärdas i respektive fas.
+> Fas 1–4 är implementerade och verifierade. Systemet bygger och kör end-to-end med fake AI.
 
-### Backend (`/server`)
+### Backend (`/server`) ✅
 
-- **Domain/Entities/Incident.cs** — Grundmodell med Id, Description, Services, Priority, Status (`"ongoing"`), CreatedBy, Confidence, Credibility, NeedsHumanReview, CreatedAt. **Saknar:** `List<PipelineStep> Steps` (Fas 1), status default bör vara `"pending_review"` (Fas 1)
-- **Domain/Models/IncidentAnalysis.cs** — Record med Services, Priority, Confidence, Credibility, NeedsHumanReview, Reasoning. **Behöver:** ta bort Credibility + NeedsHumanReview (Fas 1), göra Confidence nullable (Fas 1)
-- **Domain/Models/CredibilityAssessment.cs** — Ny record: Credibility, NeedsHumanReview, Reasoning ✅
-- **Domain/Models/PipelineStep.cs** — **Finns inte, skapas i Fas 1**
+- **Domain/Entities/Incident.cs** — Id, Description, Services, Priority, Status(`"pending_review"`), CreatedBy, Confidence, Credibility, NeedsHumanReview, `List<PipelineStep> Steps`, CreatedAt
+- **Domain/Models/IncidentAnalysis.cs** — `record(Services, Priority, Confidence?, Reasoning)`
+- **Domain/Models/CredibilityAssessment.cs** — `record(Credibility, NeedsHumanReview, Reasoning)`
+- **Domain/Models/PipelineStep.cs** — `record(Name, Result, Reasoning, Timestamp)`
 - **Domain/DTOS/** — CreateManualRequest, CreateAiRequest, UpdateIncidentRequest
-- **Domain/Contstants/IncidentConstants.cs** — Services, Priorities, CredibilityLevels. **Saknar:** Statuses-lista (Fas 1)
-- **Application/Interfaces/IAiGateway.cs** — `AnalyzeAsync(string description)` ✅
-- **Application/Interfaces/ICredibilityGateway.cs** — `AssessAsync(description, services, priority, createdBy)` ✅
-- **Application/Interfaces/IIncidentRepository.cs** — SaveAsync, GetAllAsync, GetByIdAsync, UpdateAsync ✅
-- **Application/Services/IncidentService.cs** — CreateManualAsync, CreateFromAiAsync. **Behöver:** tvåstegsflöde med ICredibilityGateway (Fas 2)
-- **Infrastructure/AI/AiGateway.cs** — Fake-implementation. **Bugg:** returnerar `"Ambulans"` (ska vara `"ambulance"`), `"High"` (ska vara `"high"`), innehåller fortfarande Credibility/NeedsHumanReview-fält (Fas 3)
-- **Infrastructure/AI/CredibilityGateway.cs** — **Finns inte, skapas i Fas 3**
-- **Infrastructure/Persistence/InMemoryIncidentRepository.cs** — Minnesbaserad lagring. **Bugg:** inte trådsäker, `List<Incident>` utan lås (Fas 1)
-- **Api/Controllers/IncidentsController.cs** — POST manual, POST ai, GET all, PATCH {id}. **Bugg:** PATCH validerar inte status mot `IncidentConstants.Statuses` (Fas 2)
-- **Program.cs** — DI-registrering. **Buggar:** `AddEndpointsApiExplorer()` anropas dubbelt (Fas 1), saknar `ICredibilityGateway`-registrering (Fas 2), saknar CORS (Fas 1)
+- **Domain/Contstants/IncidentConstants.cs** — Services, Priorities, CredibilityLevels, Statuses
+- **Application/Interfaces/** — IAiGateway, ICredibilityGateway, IIncidentRepository
+- **Application/Services/IncidentService.cs** — Tvåstegsflöde: klassificering + trovärdighetskontroll, statuslogik, felhantering med fallback till flagged
+- **Infrastructure/AI/AiGateway.cs** — Fake keyword-baserad klassificering (brand→fire, olycka→ambulance, etc.)
+- **Infrastructure/AI/CredibilityGateway.cs** — Fake trovärdighetslogik ("test"/kort→low, annars→high)
+- **Infrastructure/Persistence/InMemoryIncidentRepository.cs** — Trådsäker med `lock`
+- **Api/Controllers/IncidentsController.cs** — POST manual, POST ai, GET all, PATCH {id} (med statusvalidering), GET constants
+- **Program.cs** — DI (IAiGateway, ICredibilityGateway, IncidentService), CORS, Swagger
 
-### Frontend (`/client`)
+### Frontend (`/client`) ✅
 
-- React + TypeScript + Vite
-- **Tabellvy** med kolumner: Beskrivning, Tjänster, Prioritet, Status, Skapad av, Datum, Redigera
-- **CreateIncidentModal** — Manuellt + Agentic-läge (agentic visar bara beskrivningsfält)
-- **EditIncidentModal** — Redigera alla fält + status (bara `ongoing`/`closed`). **Bugg:** kräver `services.length > 0` för submit, men det kan saknas vid redigering (Fas 4)
-- **labels.ts** — Svenska mappningar. **Saknar:** `pending_review`, `flagged`, `rejected` (Fas 4)
-- **api.ts** — fetchIncidents, createManualIncident, createAgenticIncident, updateIncident. **Bugg:** `createAgenticIncident` skickar `CreateManualRequest`-typ till `/ai` som förväntar sig bara `{ description }` (Fas 4)
-- **types.ts** — Incident, CreateManualRequest, UpdateIncidentRequest. **Saknar:** `PipelineStep` interface, `steps` på Incident, separat `CreateAiRequest`-typ (Fas 4)
-- Vite proxy `/api` → `http://localhost:5236`
+- React + TypeScript + Vite, proxy `/api` → `http://localhost:5236`
+- **Kortvy** med IncidentCard-komponenter (ersätter tidigare tabellvy)
+- **PipelineSteps.tsx** — Visar ✅/❌ per steg med reasoning
+- **IncidentCard.tsx** — Metadata, status-badge, pipeline-steg, Godkänn/Avvisa-knappar för flaggade
+- **CreateIncidentModal** — Manuellt + AI-läge (AI visar bara beskrivningsfält)
+- **EditIncidentModal** — Alla fem statusar, services valfritt
+- **labels.ts** — Svenska labels för alla statusar (pending_review, ongoing, flagged, rejected, closed)
+- **api.ts** — fetchIncidents, createManualIncident, createAgenticIncident (bara description), updateIncident
+- **types.ts** — Incident (med steps), PipelineStep, CreateManualRequest, CreateAiRequest, UpdateIncidentRequest
 
 ---
 
@@ -47,8 +46,8 @@ Ett ärendehanteringssystem för nödsituationer med **tvåstegs AI-pipeline**: 
 
 ### Uppgifter
 
-- [ ] **Domain/Models/IncidentAnalysis.cs** — Ta bort `Credibility`, `NeedsHumanReview`. Gör Confidence nullable (`double?`). Behåll: `Services`, `Priority`, `Confidence`, `Reasoning`
-- [ ] **Domain/Models/PipelineStep.cs** — NY modell:
+- [x] **Domain/Models/IncidentAnalysis.cs** — Ta bort `Credibility`, `NeedsHumanReview`. Gör Confidence nullable (`double?`). Behåll: `Services`, `Priority`, `Confidence`, `Reasoning`
+- [x] **Domain/Models/PipelineStep.cs** — NY modell:
   ```csharp
   public record PipelineStep(
       string Name,       // "classification" eller "credibility_check"
@@ -58,17 +57,17 @@ Ett ärendehanteringssystem för nödsituationer med **tvåstegs AI-pipeline**: 
   );
   ```
   > **OBS:** `Result` är fritext-sammanfattning av stegets output. Hålls enkelt nu, kan bli strukturerat objekt i Fas 5 om det behövs.
-- [ ] **Domain/Entities/Incident.cs** — Lägg till `List<PipelineStep> Steps = new()`, ändra `Status` default till `"pending_review"`
-- [ ] **Domain/Contstants/IncidentConstants.cs** — Lägg till:
+- [x] **Domain/Entities/Incident.cs** — Lägg till `List<PipelineStep> Steps = new()`, ändra `Status` default till `"pending_review"`
+- [x] **Domain/Contstants/IncidentConstants.cs** — Lägg till:
   ```csharp
   public static readonly List<string> Statuses = new()
   {
       "pending_review", "ongoing", "flagged", "rejected", "closed"
   };
   ```
-- [ ] **Infrastructure/Persistence/InMemoryIncidentRepository.cs** — Gör trådsäker: lägg till `lock` runt alla operationer på `_storage`
-- [ ] **Program.cs** — Ta bort dubbletten av `AddEndpointsApiExplorer()`
-- [ ] **Program.cs** — Lägg till CORS-konfiguration (`AllowAnyOrigin` i dev, explicit origin i prod)
+- [x] **Infrastructure/Persistence/InMemoryIncidentRepository.cs** — Gör trådsäker: lägg till `lock` runt alla operationer på `_storage`
+- [x] **Program.cs** — Ta bort dubbletten av `AddEndpointsApiExplorer()`
+- [x] **Program.cs** — Lägg till CORS-konfiguration (`AllowAnyOrigin` i dev, explicit origin i prod)
 
 ### Separation av ansvar
 
@@ -130,10 +129,10 @@ Om `ICredibilityGateway.AssessAsync()` kastar exception:
 
 ### Uppgifter
 
-- [ ] **Application/Services/IncidentService.cs** — Injicera `ICredibilityGateway`, implementera tvåstegsflöde enligt ovan, inkl. felhantering
-- [ ] **Program.cs** — Registrera `ICredibilityGateway` i DI
-- [ ] **Api/Controllers/IncidentsController.cs** — PATCH: validera `request.Status` mot `IncidentConstants.Statuses` innan uppdatering, returnera `400 Bad Request` vid ogiltigt värde
-- [ ] **Api/Controllers/IncidentsController.cs** — NY endpoint: `GET /api/constants` — returnerar tillgängliga services, priorities, statuses, credibilityLevels (så frontend inte hårdkodar)
+- [x] **Application/Services/IncidentService.cs** — Injicera `ICredibilityGateway`, implementera tvåstegsflöde enligt ovan, inkl. felhantering
+- [x] **Program.cs** — Registrera `ICredibilityGateway` i DI
+- [x] **Api/Controllers/IncidentsController.cs** — PATCH: validera `request.Status` mot `IncidentConstants.Statuses` innan uppdatering, returnera `400 Bad Request` vid ogiltigt värde
+- [x] **Api/Controllers/IncidentsController.cs** — NY endpoint: `GET /api/constants` — returnerar tillgängliga services, priorities, statuses, credibilityLevels (så frontend inte hårdkodar)
 - [ ] **Enhetstester** — Testa statuslogiken:
   - high + null confidence → ongoing
   - medium + 0.7 → ongoing
@@ -149,16 +148,16 @@ Om `ICredibilityGateway.AssessAsync()` kastar exception:
 
 ### Uppgifter
 
-- [ ] **Infrastructure/AI/AiGateway.cs** — Uppdatera: returnera `IncidentAnalysis` UTAN credibility-fält. **Fixa värden:** använd `"ambulance"` (inte `"Ambulans"`), `"high"` (inte `"High"`) — måste matcha `IncidentConstants`
-- [ ] **Infrastructure/AI/CredibilityGateway.cs** — NY implementation av `ICredibilityGateway`:
+- [x] **Infrastructure/AI/AiGateway.cs** — Uppdatera: returnera `IncidentAnalysis` UTAN credibility-fält. **Fixa värden:** använd `"ambulance"` (inte `"Ambulans"`), `"high"` (inte `"High"`) — måste matcha `IncidentConstants`
+- [x] **Infrastructure/AI/CredibilityGateway.cs** — NY implementation av `ICredibilityGateway`:
   - Beskrivning innehåller "test" / "hej" / "asdf" → `low`, `needsHumanReview: true`, `"Ser ut som ett test"`
   - Beskrivning < 10 tecken → `low`, `needsHumanReview: true`, `"För kort beskrivning för att bedöma"`
   - Annars → `high`, `needsHumanReview: false`, `"Realistisk och trovärdig beskrivning"`
   > **OBS:** Fake-implementationen använder bara `description` för att avgöra. Parametrarna `services`, `priority`, `createdBy` skickas med men används först i Fas 5 (riktig AI).
-- [ ] Verifiera: skapa manuellt ärende → får credibility-steg
-- [ ] Verifiera: skapa AI-ärende → får classification + credibility-steg
-- [ ] Verifiera: "test"-ärende → status `flagged`
-- [ ] Verifiera: vanligt ärende → status `ongoing`
+- [x] Verifiera: skapa manuellt ärende → får credibility-steg
+- [x] Verifiera: skapa AI-ärende → får classification + credibility-steg
+- [x] Verifiera: "test"-ärende → status `flagged`
+- [x] Verifiera: vanligt ärende → status `ongoing`
 
 ---
 
@@ -168,8 +167,8 @@ Om `ICredibilityGateway.AssessAsync()` kastar exception:
 
 ### Nya/ändrade filer
 
-- [ ] **types.ts** — Lägg till `PipelineStep` interface, lägg till `steps: PipelineStep[]` på `Incident`. Lägg till separat `CreateAiRequest` typ (bara `{ description }`)
-- [ ] **labels.ts** — Uppdatera `STATUS_LABELS`:
+- [x] **types.ts** — Lägg till `PipelineStep` interface, lägg till `steps: PipelineStep[]` på `Incident`. Lägg till separat `CreateAiRequest` typ (bara `{ description }`)
+- [x] **labels.ts** — Uppdatera `STATUS_LABELS`:
   ```typescript
   export const STATUS_LABELS: Record<string, string> = {
     pending_review: "Granskas",
@@ -179,20 +178,20 @@ Om `ICredibilityGateway.AssessAsync()` kastar exception:
     closed: "Avslutat",
   };
   ```
-- [ ] **api.ts** — Fixa `createAgenticIncident`: använd `CreateAiRequest` (bara description), inte `CreateManualRequest`. Lägg till `fetchConstants()` som hämtar `GET /api/constants`
-- [ ] **components/PipelineSteps.tsx** — NY komponent:
+- [x] **api.ts** — Fixa `createAgenticIncident`: använd `CreateAiRequest` (bara description), inte `CreateManualRequest`
+- [x] **components/PipelineSteps.tsx** — NY komponent:
   - Renderar `steps[]` med ✅/❌ ikoner
   - Visar reasoning för varje steg
   - Manuella ärenden: visar "Manuellt skapat" istället för classification-steg
-- [ ] **components/IncidentCard.tsx** — NY komponent (ersätter tabellrad):
+- [x] **components/IncidentCard.tsx** — NY komponent (ersätter tabellrad):
   - Beskrivning + metadata (tjänster, prioritet, datum, skapad av)
   - Status-badge med färgkodning
   - Pipeline-steg (PipelineSteps)
   - Edit-knapp
   - Flaggade ärenden: "Godkänn" / "Avvisa"-knappar (anropar PATCH med `status: "ongoing"` resp. `status: "rejected"`)
-- [ ] **components/IncidentList.tsx** — Ändra till att rendera `IncidentCard` istället för tabell
-- [ ] **components/EditIncidentModal.tsx** — Uppdatera status-dropdown med alla fem statusar. Fixa: gör services-validering valfri (tillåt submit utan services vid redigering)
-- [ ] **App.css** — Nya styles:
+- [x] **components/IncidentList.tsx** — Ändra till att rendera `IncidentCard` istället för tabell
+- [x] **components/EditIncidentModal.tsx** — Uppdatera status-dropdown med alla fem statusar. Fixa: gör services-validering valfri (tillåt submit utan services vid redigering)
+- [x] **App.css** — Nya styles:
   - Kortstyles (bakgrund, skugga, padding)
   - Pipeline-steg (ikon + text)
   - Nya status-badges: `pending_review` (grå), `flagged` (orange), `rejected` (röd), `closed` (grön)
@@ -296,16 +295,14 @@ Infrastructure/AI/
 
 ## Exekveringsordning
 
-| # | Fas | Beskrivning | Beroende |
-|---|-----|-------------|----------|
-| 1 | Modeller + buggfixar | PipelineStep, uppdatera Incident/IncidentAnalysis/IncidentConstants, trådsäker repo, CORS, fixa Program.cs-dubblett | — |
-| 2 | Service + validering | Tvåstegsflöde i IncidentService, PATCH-validering, GET /api/constants, enhetstester för statuslogik | Fas 1 |
-| 3 | Fake AI | CredibilityGateway fake-impl, fixa AiGateway (rätt casing, ta bort credibility-fält) | Fas 2 |
-| 4 | Frontend | Kortvy, PipelineSteps, nya statusar, fixa CreateAiRequest-typ, operatörsknappar, hämta constants från API | Fas 3 |
-| 5 | Riktig AI | Microsoft.Extensions.AI, prompts, structured output, validering | Fas 3 |
-| 6 | Produktion | Retry, loggning, global felhantering, DB-migrering | Fas 5 |
-
-Fas 4 (frontend) och Fas 5 (riktig AI) kan köras parallellt efter Fas 3.
+| # | Fas | Beskrivning | Status |
+|---|-----|-------------|--------|
+| 1 | Modeller + buggfixar | PipelineStep, uppdatera Incident/IncidentAnalysis/IncidentConstants, trådsäker repo, CORS, fixa Program.cs-dubblett | ✅ Klar |
+| 2 | Service + validering | Tvåstegsflöde i IncidentService, PATCH-validering, GET /api/constants | ✅ Klar |
+| 3 | Fake AI | CredibilityGateway fake-impl, fixa AiGateway (rätt casing, ta bort credibility-fält) | ✅ Klar |
+| 4 | Frontend | Kortvy, PipelineSteps, nya statusar, fixa CreateAiRequest-typ, operatörsknappar | ✅ Klar |
+| 5 | Riktig AI | Microsoft.Extensions.AI, prompts, structured output, validering | ⬜ Nästa |
+| 6 | Produktion | Retry, loggning, global felhantering, DB-migrering | ⬜ |
 
 ---
 
