@@ -28,29 +28,17 @@ public class IncidentService
         List<string> services,
         string priority)
     {
-        var analysis = await _ai.AnalyzeAsync(description, services);
-
         var incident = new Incident
         {
             Id = Guid.NewGuid(),
             Description = description,
-            Services = analysis.Services,
-            Priority = analysis.Priority,
-            Confidence = analysis.Confidence,
+            Services = services,
+            Priority = priority,
             CreatedBy = "User",
             CreatedAt = DateTime.UtcNow
         };
 
-        incident.Steps.Add(new PipelineStep(
-            "classification",
-            $"services: [{string.Join(", ", analysis.Services)}], priority: {analysis.Priority}, confidence: {analysis.Confidence}",
-            analysis.Reasoning,
-            DateTime.UtcNow
-        ));
-
         await _repo.SaveAsync(incident);
-        await RunCredibilityCheck(incident);
-        await _repo.UpdateAsync(incident);
 
         return incident;
     }
@@ -84,26 +72,69 @@ public class IncidentService
         return incident;
     }
 
-    public async Task<Incident> ReclassifyAsync(Incident incident, string newDescription, List<string>? userSelectedServices = null)
+    public async Task<Incident> ValidateAsync(Incident incident)
     {
-        incident.Description = newDescription;
-        incident.CreatedBy = "User";
         incident.Steps.Clear();
 
-        var analysis = await _ai.AnalyzeAsync(newDescription, userSelectedServices);
-
-        incident.Services = analysis.Services;
-        incident.Priority = analysis.Priority;
+        var analysis = await _ai.AnalyzeAsync(incident.Description, incident.Services, incident.Priority);
         incident.Confidence = analysis.Confidence;
 
+        var selectedServices = incident.Services;
+        var aiSuggestedServices = analysis.Services;
+        var missingServices = aiSuggestedServices.Except(selectedServices).ToList();
+        var extraServices = selectedServices.Except(aiSuggestedServices).ToList();
+        var servicesMatch = missingServices.Count == 0 && extraServices.Count == 0;
+
+        var validationResult =
+            $"selectedServices: [{string.Join(", ", selectedServices)}], " +
+            $"aiSuggestedServices: [{string.Join(", ", aiSuggestedServices)}], " +
+            $"missing: [{string.Join(", ", missingServices)}], " +
+            $"extra: [{string.Join(", ", extraServices)}], " +
+            $"suggestedPriority: {analysis.Priority}, " +
+            $"servicesMatch: {servicesMatch}";
+
+        var priorityMatch = incident.Priority == analysis.Priority;
+
+        var validationReasoning = analysis.Reasoning;
+        if (!servicesMatch || !priorityMatch)
+        {
+            var issues = new List<string>();
+            if (missingServices.Count > 0)
+                issues.Add($"Saknar: {string.Join(", ", missingServices)}");
+            if (extraServices.Count > 0)
+                issues.Add($"Överflödiga: {string.Join(", ", extraServices)}");
+            if (!priorityMatch)
+                issues.Add($"Prioritet korrigerad från {incident.Priority} till {analysis.Priority}");
+            validationReasoning = $"{string.Join(". ", issues)}. {analysis.Reasoning}";
+        }
+
+        // Korrigera prioritet till AI:ns bedömning
+        if (!priorityMatch)
+        {
+            incident.Priority = analysis.Priority;
+        }
+
+        // Korrigera tjänster till AI:ns bedömning
+        if (!servicesMatch)
+        {
+            incident.Services = analysis.Services;
+        }
+
         incident.Steps.Add(new PipelineStep(
-            "classification",
-            $"services: [{string.Join(", ", analysis.Services)}], priority: {analysis.Priority}, confidence: {analysis.Confidence}",
-            analysis.Reasoning,
+            "classification_validation",
+            validationResult,
+            validationReasoning,
             DateTime.UtcNow
         ));
 
         await RunCredibilityCheck(incident);
+
+        if (!servicesMatch || !priorityMatch || incident.Credibility != "high")
+        {
+            incident.NeedsHumanReview = true;
+            incident.Status = "flagged";
+        }
+
         await _repo.UpdateAsync(incident);
 
         return incident;

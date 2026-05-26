@@ -16,3 +16,9 @@ public record UpdateIncidentRequest(
     string? Priority,
     string? Status
 );
+
+public record ValidateIncidentRequest(
+    string? Description,
+    List<string>? Services,
+    string? Priority
+);

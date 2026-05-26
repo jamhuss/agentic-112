@@ -54,20 +54,57 @@ public class IncidentsController : ControllerBase
         if (request.Status is not null && !IncidentConstants.Statuses.Contains(request.Status))
             return BadRequest($"Invalid status. Allowed: {string.Join(", ", IncidentConstants.Statuses)}");
 
-        // Content edit → reclassify via AI pipeline
+        // Manual edit only - no automatic AI validation here
+        var descriptionChanged = request.Description is not null && request.Description != incident.Description;
+        var wasAiCreated = incident.CreatedBy == "AI";
+        var contentChanged = request.Description is not null || request.Services is not null || request.Priority is not null;
+
+        if (request.Services is not null) incident.Services = request.Services;
+        if (request.Priority is not null) incident.Priority = request.Priority;
         if (request.Description is not null)
         {
-            var result = await _service.ReclassifyAsync(incident, request.Description, request.Services);
+            incident.Description = request.Description;
+            incident.CreatedBy = "User";
+        }
+
+        // AI-ärende med ändrad beskrivning → kör om hela pipelinen automatiskt
+        if (wasAiCreated && descriptionChanged)
+        {
+            var result = await _service.ValidateAsync(incident);
             return Ok(result);
         }
 
-        // Status-only update (approve/reject)
-        if (request.Services is not null) incident.Services = request.Services;
-        if (request.Priority is not null) incident.Priority = request.Priority;
+        if (contentChanged)
+        {
+            incident.Steps.Clear();
+            incident.Confidence = null;
+            incident.Credibility = null;
+            incident.NeedsHumanReview = null;
+            incident.Status = "pending_review";
+        }
+
         if (request.Status is not null) incident.Status = request.Status;
 
         await _repo.UpdateAsync(incident);
         return Ok(incident);
+    }
+
+    [HttpPost("{id:guid}/validate")]
+    public async Task<IActionResult> Validate(Guid id, [FromBody] ValidateIncidentRequest request)
+    {
+        var incident = await _repo.GetByIdAsync(id);
+        if (incident is null) return NotFound();
+
+        if (request.Services is not null) incident.Services = request.Services;
+        if (request.Priority is not null) incident.Priority = request.Priority;
+        if (request.Description is not null)
+        {
+            incident.Description = request.Description;
+            incident.CreatedBy = "User";
+        }
+
+        var result = await _service.ValidateAsync(incident);
+        return Ok(result);
     }
 
     [HttpGet("constants")]

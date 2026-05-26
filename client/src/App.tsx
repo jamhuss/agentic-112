@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { fetchIncidents, createManualIncident, updateIncident, createAgenticIncident } from "./api";
-import type { Incident, CreateManualRequest, UpdateIncidentRequest } from "./types";
+import { fetchIncidents, createManualIncident, updateIncident, createAgenticIncident, validateIncident } from "./api";
+import type { Incident, CreateManualRequest, UpdateIncidentRequest, ValidateIncidentRequest } from "./types";
 import { IncidentList } from "./components/IncidentList";
 import { CreateIncidentModal } from "./components/CreateIncidentModal";
 import { EditIncidentModal } from "./components/EditIncidentModal";
@@ -12,6 +12,7 @@ function App() {
   const [editingIncident, setEditingIncident] = useState<Incident | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [validating, setValidating] = useState(false);
   const [isAgentic, setIsAgentic] = useState(false);
 
   async function loadIncidents() {
@@ -56,6 +57,17 @@ function App() {
     }
   }
 
+  async function handleValidate(id: string, request: ValidateIncidentRequest) {
+    setValidating(true);
+    try {
+      await validateIncident(id, request);
+      await loadIncidents();
+      setEditingIncident(null);
+    } finally {
+      setValidating(false);
+    }
+  }
+
   return (
     <div className="app">
       <header className="app-header">
@@ -95,7 +107,9 @@ function App() {
         incident={editingIncident}
         onClose={() => setEditingIncident(null)}
         onSubmit={handleUpdate}
+        onValidate={handleValidate}
         submitting={submitting}
+        validating={validating}
       />
     </div>
   );

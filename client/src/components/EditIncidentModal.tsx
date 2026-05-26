@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Incident, UpdateIncidentRequest } from "../types";
+import type { Incident, UpdateIncidentRequest, ValidateIncidentRequest } from "../types";
 import { SERVICE_LABELS, PRIORITY_LABELS, STATUS_LABELS } from "../labels";
 
 const AVAILABLE_SERVICES = Object.keys(SERVICE_LABELS);
@@ -10,10 +10,12 @@ interface Props {
   incident: Incident | null;
   onClose: () => void;
   onSubmit: (id: string, request: UpdateIncidentRequest) => void;
+  onValidate: (id: string, request: ValidateIncidentRequest) => void;
   submitting?: boolean;
+  validating?: boolean;
 }
 
-export function EditIncidentModal({ incident, onClose, onSubmit, submitting }: Props) {
+export function EditIncidentModal({ incident, onClose, onSubmit, onValidate, submitting , validating }: Props) {
   const [description, setDescription] = useState(incident?.description ?? "");
   const [services, setServices] = useState<string[]>(incident?.services ?? []);
   const [priority, setPriority] = useState(incident?.priority ?? "medium");
@@ -37,6 +39,15 @@ export function EditIncidentModal({ incident, onClose, onSubmit, submitting }: P
       services,
       priority,
       status,
+    });
+  }
+
+  function handleValidate() {
+    if (!description.trim()) return;
+    onValidate(incident!.id, {
+      description: description.trim(),
+      services,
+      priority,
     });
   }
 
@@ -104,11 +115,19 @@ export function EditIncidentModal({ incident, onClose, onSubmit, submitting }: P
               Avbryt
             </button>
             <button
+              type="button"
+              className="btn-secondary"
+              onClick={handleValidate}
+              disabled={!description.trim() || submitting || validating}
+            >
+              {validating ? "Validerar..." : "Validera med AI"}
+            </button>
+            <button
               type="submit"
               className="btn-primary"
-              disabled={!description.trim() || submitting}
+              disabled={!description.trim() || submitting || validating}
             >
-              {submitting ? "Analyserar..." : "Spara"}
+              {submitting ? "Sparar..." : "Spara"}
             </button>
           </div>
         </form>

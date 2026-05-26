@@ -35,3 +35,9 @@ export interface UpdateIncidentRequest {
   priority?: string;
   status?: string;
 }
+
+export interface ValidateIncidentRequest {
+  description?: string;
+  services?: string[];
+  priority?: string;
+}

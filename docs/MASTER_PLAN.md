@@ -2,7 +2,7 @@
 
 ## Vision
 
-Ett ärendehanteringssystem för nödsituationer med **tvåstegs AI-pipeline**: klassificering + trovärdighetsbedömning. Alla ärenden — manuella och AI-skapade — genomgår trovärdighetskontroll. Varje steg loggas och visualiseras transparent i frontend.
+Ett ärendehanteringssystem för nödsituationer med **tvåstegs AI-pipeline**: klassificering + trovärdighetsbedömning. AI-ärenden kör full pipeline automatiskt, medan manuella ärenden valideras explicit av operatören via en knapp i edit-vyn. Varje steg loggas och visualiseras transparent i frontend.
 
 ---
 
@@ -27,7 +27,7 @@ Ett ärendehanteringssystem för nödsituationer med **tvåstegs AI-pipeline**: 
 - **Infrastructure/AI/Parsing/AiResponseValidator.cs** — Validerar AI-svar mot IncidentConstants
 - **Infrastructure/AI/Configuration/AiOptions.cs** — Endpoint, Model, Temperature, MaxRetries, ApiKey
 - **Infrastructure/Persistence/InMemoryIncidentRepository.cs** — Trådsäker med `lock`
-- **Api/Controllers/IncidentsController.cs** — POST manual, POST ai, GET all, PATCH {id} (med statusvalidering), GET constants
+- **Api/Controllers/IncidentsController.cs** — POST manual, POST ai, GET all, PATCH {id} (med statusvalidering), POST {id}/validate, GET constants
 - **Program.cs** — DI (IChatClient via AzureOpenAIClient, IAiGateway, ICredibilityGateway, IncidentService), CORS, Swagger
 - **appsettings.json** — AI-sektion (Endpoint, Model, Temperature, MaxRetries)
 - **User Secrets** — AI:ApiKey (aldrig i git)
@@ -39,7 +39,7 @@ Ett ärendehanteringssystem för nödsituationer med **tvåstegs AI-pipeline**: 
 - **PipelineSteps.tsx** — Visar ✅/❌ per steg med reasoning
 - **IncidentCard.tsx** — Metadata, status-badge, pipeline-steg, Godkänn/Avvisa-knappar för flaggade
 - **CreateIncidentModal** — Manuellt + AI-läge (AI visar bara beskrivningsfält)
-- **EditIncidentModal** — Alla fem statusar, services valfritt
+- **EditIncidentModal** — Alla fem statusar, services valfritt, explicit knapp för "Validera med AI"
 - **labels.ts** — Svenska labels för alla statusar (pending_review, ongoing, flagged, rejected, closed)
 - **api.ts** — fetchIncidents, createManualIncident, createAgenticIncident (bara description), updateIncident
 - **types.ts** — Incident (med steps), PipelineStep, CreateManualRequest, CreateAiRequest, UpdateIncidentRequest
@@ -280,7 +280,30 @@ Infrastructure/AI/
 
 ---
 
-## Fas 6 — Produktion och kvalitet
+## Fas 6 — Explicit AI-validering vid redigering
+
+**Mål:** AI ska inte köras automatiskt för manuella ärenden eller vid vanlig redigering. Operatören väljer explicit när ett ärende ska AI-valideras.
+
+### Uppgifter
+
+- [x] **Skapa manuellt ärende utan auto-AI**
+  - `CreateManualAsync` sparar användarens egna tjänster och prioritet direkt
+  - Ingen automatisk klassificering/trovärdighetskontroll vid skapande
+- [x] **Redigering utan auto-AI**
+  - `PATCH /api/incidents/{id}` uppdaterar fält manuellt
+  - Innehållsändring rensar tidigare AI-steg och sätter status till `pending_review`
+- [x] **Ny explicit validering endpoint**
+  - `POST /api/incidents/{id}/validate`
+  - Kör AI-baserad validering av valda tjänster mot texten
+  - Kör trovärdighetsbedömning av texten
+- [x] **Valideringsknapp i Edit-vyn**
+  - Ny knapp: "Validera med AI"
+  - Operatören styr själv när validering ska köras
+  - Visar loading state under validering
+- [x] **Agentic-flöde oförändrat**
+  - AI-ärenden (`POST /api/incidents/ai`) kör fortfarande full pipeline automatiskt
+
+## Fas 7 — Produktion och kvalitet
 
 **Mål:** Produktionsredo kod med felhantering, retry och observabilitet.
 
@@ -308,7 +331,8 @@ Infrastructure/AI/
 | 3 | Fake AI | CredibilityGateway fake-impl, fixa AiGateway (rätt casing, ta bort credibility-fält) | ✅ Klar |
 | 4 | Frontend | Kortvy, PipelineSteps, nya statusar, fixa CreateAiRequest-typ, operatörsknappar | ✅ Klar |
 | 5 | Riktig AI | Microsoft.Extensions.AI, prompts, structured output, validering | ✅ Klar |
-| 6 | Produktion | Retry, loggning, global felhantering, DB-migrering | ⬜ Nästa |
+| 6 | Explicit validering | Manuell create/edit utan auto-AI, validera-knapp i Edit, ny validate-endpoint | ✅ Klar |
+| 7 | Produktion | Retry, loggning, global felhantering, DB-migrering | ⬜ Nästa |
 
 ---
 

@@ -1,4 +1,4 @@
-import type { CreateManualRequest, CreateAiRequest, Incident, UpdateIncidentRequest } from "./types";
+import type { CreateManualRequest, CreateAiRequest, Incident, UpdateIncidentRequest, ValidateIncidentRequest } from "./types";
 
 const API_BASE = "/api/incidents";
 
@@ -42,5 +42,18 @@ export async function updateIncident(
     body: JSON.stringify(request),
   });
   if (!res.ok) throw new Error("Failed to update incident");
+  return res.json();
+}
+
+export async function validateIncident(
+  id: string,
+  request: ValidateIncidentRequest
+): Promise<Incident> {
+  const res = await fetch(`${API_BASE}/${id}/validate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+  if (!res.ok) throw new Error("Failed to validate incident");
   return res.json();
 }
