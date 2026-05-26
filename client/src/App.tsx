@@ -29,7 +29,11 @@ function App() {
   }, []);
 
   async function handleCreate(request: CreateManualRequest) {
-    await (isAgentic ? createAgenticIncident(request) : createManualIncident(request));
+    if (isAgentic) {
+      await createAgenticIncident({ description: request.description });
+    } else {
+      await createManualIncident(request);
+    }
     await loadIncidents();
   }
 
@@ -43,11 +47,11 @@ function App() {
       <header className="app-header">
         <h1>Ärenden</h1>
        <div className="buttons">
-         <button className="btn-primary" onClick={() => setModalOpen(true)}>
+         <button className="btn-primary" onClick={() => { setIsAgentic(false); setModalOpen(true); }}>
           + Nytt ärende
         </button>
-         <button className="btn-primary" onClick={() => { setIsAgentic(true); setModalOpen(true); } }>
-          + Nytt agentic ärende
+         <button className="btn-primary btn-agentic" onClick={() => { setIsAgentic(true); setModalOpen(true); }}>
+          🤖 Nytt AI-ärende
          </button>
        </div>
       </header>
@@ -56,13 +60,17 @@ function App() {
         {loading ? (
           <p>Laddar...</p>
         ) : (
-          <IncidentList incidents={incidents} onEdit={setEditingIncident} />
+          <IncidentList
+            incidents={incidents}
+            onEdit={setEditingIncident}
+            onUpdateStatus={handleUpdate}
+          />
         )}
       </main>
 
       <CreateIncidentModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => { setModalOpen(false); setIsAgentic(false); }}
         onSubmit={handleCreate}
         isAgentic={isAgentic}
       />

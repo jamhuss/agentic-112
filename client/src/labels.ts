@@ -13,6 +13,9 @@ export const PRIORITY_LABELS: Record<string, string> = {
 };
 
 export const STATUS_LABELS: Record<string, string> = {
+  pending_review: "Granskas",
   ongoing: "Pågående",
+  flagged: "Flaggad",
+  rejected: "Avvisad",
   closed: "Avslutat",
 };

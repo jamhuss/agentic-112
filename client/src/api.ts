@@ -1,4 +1,4 @@
-import type { CreateManualRequest, Incident, UpdateIncidentRequest } from "./types";
+import type { CreateManualRequest, CreateAiRequest, Incident, UpdateIncidentRequest } from "./types";
 
 const API_BASE = "/api/incidents";
 
@@ -21,12 +21,12 @@ export async function createManualIncident(
 }
 
 export async function createAgenticIncident(
-  request: CreateManualRequest
+  request: CreateAiRequest
 ): Promise<Incident> {
   const res = await fetch(`${API_BASE}/ai`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(request),
+    body: JSON.stringify({ description: request.description }),
   });
   if (!res.ok) throw new Error("Failed to create incident");
   return res.json();

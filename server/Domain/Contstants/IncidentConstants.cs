@@ -24,5 +24,14 @@
             "medium",
             "low"
         ];
+
+        public static readonly List<string> Statuses =
+        [
+            "pending_review",
+            "ongoing",
+            "flagged",
+            "rejected",
+            "closed"
+        ];
     }
 }

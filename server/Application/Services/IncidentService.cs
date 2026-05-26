@@ -1,17 +1,27 @@
 using Application.Interfaces;
 using Domain.Entities;
+using Domain.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Application.Services;
 
 public class IncidentService
 {
     private readonly IAiGateway _ai;
+    private readonly ICredibilityGateway _credibility;
     private readonly IIncidentRepository _repo;
+    private readonly ILogger<IncidentService> _logger;
 
-    public IncidentService(IAiGateway ai, IIncidentRepository repo)
+    public IncidentService(
+        IAiGateway ai,
+        ICredibilityGateway credibility,
+        IIncidentRepository repo,
+        ILogger<IncidentService> logger)
     {
         _ai = ai;
+        _credibility = credibility;
         _repo = repo;
+        _logger = logger;
     }
 
     public async Task<Incident> CreateManualAsync(
@@ -30,6 +40,9 @@ public class IncidentService
         };
 
         await _repo.SaveAsync(incident);
+        await RunCredibilityCheck(incident);
+        await _repo.UpdateAsync(incident);
+
         return incident;
     }
 
@@ -45,12 +58,73 @@ public class IncidentService
             Priority = analysis.Priority,
             CreatedBy = "AI",
             Confidence = analysis.Confidence,
-            Credibility = analysis.Credibility,
-            NeedsHumanReview = analysis.NeedsHumanReview,
             CreatedAt = DateTime.UtcNow
         };
 
+        incident.Steps.Add(new PipelineStep(
+            "classification",
+            $"services: [{string.Join(", ", analysis.Services)}], priority: {analysis.Priority}, confidence: {analysis.Confidence}",
+            analysis.Reasoning,
+            DateTime.UtcNow
+        ));
+
         await _repo.SaveAsync(incident);
+        await RunCredibilityCheck(incident);
+        await _repo.UpdateAsync(incident);
+
         return incident;
+    }
+
+    private async Task RunCredibilityCheck(Incident incident)
+    {
+        try
+        {
+            var assessment = await _credibility.AssessAsync(
+                incident.Description,
+                incident.Services,
+                incident.Priority,
+                incident.CreatedBy);
+
+            incident.Credibility = assessment.Credibility;
+            incident.NeedsHumanReview = assessment.NeedsHumanReview;
+
+            incident.Steps.Add(new PipelineStep(
+                "credibility_check",
+                $"credibility: {assessment.Credibility}, needsHumanReview: {assessment.NeedsHumanReview}",
+                assessment.Reasoning,
+                DateTime.UtcNow
+            ));
+
+            incident.Status = DetermineStatus(assessment.Credibility, incident.Confidence);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Credibility check failed for incident {Id}", incident.Id);
+
+            incident.Credibility = null;
+            incident.NeedsHumanReview = true;
+            incident.Status = "flagged";
+
+            incident.Steps.Add(new PipelineStep(
+                "credibility_check",
+                "ERROR",
+                $"Trovärdighetskontroll misslyckades: {ex.Message}",
+                DateTime.UtcNow
+            ));
+        }
+    }
+
+    private static string DetermineStatus(string credibility, double? confidence)
+    {
+        var effectiveConfidence = confidence ?? 1.0;
+
+        return credibility switch
+        {
+            "high" => "ongoing",
+            "medium" when effectiveConfidence >= 0.6 => "ongoing",
+            "medium" => "flagged",
+            "low" => "flagged",
+            _ => "flagged"
+        };
     }
 }

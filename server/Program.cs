@@ -8,8 +8,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddEndpointsApiExplorer();
-
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
@@ -20,21 +18,33 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// CORS
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
 
-// DI (din egen)
+// DI
 builder.Services.AddSingleton<IIncidentRepository, InMemoryIncidentRepository>();
 builder.Services.AddSingleton<IAiGateway, AiGateway>();
+builder.Services.AddSingleton<ICredibilityGateway, CredibilityGateway>();
 builder.Services.AddScoped<IncidentService>();
 
 var app = builder.Build();
 
-// Swagger (viktigt)
+// Swagger
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+app.UseCors();
 app.UseAuthorization();
 
 app.MapControllers();

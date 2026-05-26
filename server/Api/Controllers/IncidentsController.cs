@@ -4,6 +4,7 @@ using Application.Interfaces;
 using Application.Services;
 using global::Domain.DTOS;
 using Microsoft.AspNetCore.Mvc;
+using server.Domain.Contstants;
 
 [ApiController]
 [Route("api/incidents")]
@@ -50,6 +51,9 @@ public class IncidentsController : ControllerBase
         var incident = await _repo.GetByIdAsync(id);
         if (incident is null) return NotFound();
 
+        if (request.Status is not null && !IncidentConstants.Statuses.Contains(request.Status))
+            return BadRequest($"Invalid status. Allowed: {string.Join(", ", IncidentConstants.Statuses)}");
+
         if (request.Description is not null) incident.Description = request.Description;
         if (request.Services is not null) incident.Services = request.Services;
         if (request.Priority is not null) incident.Priority = request.Priority;
@@ -57,5 +61,17 @@ public class IncidentsController : ControllerBase
 
         await _repo.UpdateAsync(incident);
         return Ok(incident);
+    }
+
+    [HttpGet("constants")]
+    public IActionResult GetConstants()
+    {
+        return Ok(new
+        {
+            services = IncidentConstants.Services,
+            priorities = IncidentConstants.Priorities,
+            statuses = IncidentConstants.Statuses,
+            credibilityLevels = IncidentConstants.CredibilityLevels
+        });
     }
 }

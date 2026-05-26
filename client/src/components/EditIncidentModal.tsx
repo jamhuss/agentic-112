@@ -30,7 +30,7 @@ export function EditIncidentModal({ incident, onClose, onSubmit }: Props) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!description.trim() || services.length === 0) return;
+    if (!description.trim()) return;
     onSubmit(incident!.id, {
       description: description.trim(),
       services,
@@ -106,7 +106,7 @@ export function EditIncidentModal({ incident, onClose, onSubmit }: Props) {
             <button
               type="submit"
               className="btn-primary"
-              disabled={!description.trim() || services.length === 0}
+              disabled={!description.trim()}
             >
               Spara
             </button>
