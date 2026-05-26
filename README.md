@@ -32,14 +32,15 @@ ongoing        → closed      (ärende avslutat)
 |-------|--------|
 | Backend | .NET 10 Web API, Clean Architecture |
 | Frontend | React + TypeScript + Vite |
-| AI (nuvarande) | Fake keyword-baserad implementation |
-| AI (planerad) | Microsoft.Extensions.AI + Azure OpenAI GPT-4o |
+| AI | Microsoft.Extensions.AI + Azure OpenAI GPT-4o |
+| AI-format | Structured Outputs (JSON Schema) |
 
 ## Kom igång
 
 ```bash
 # Backend
 cd server
+dotnet user-secrets set "AI:ApiKey" "din-azure-openai-nyckel"
 dotnet run
 # → http://localhost:5236/swagger
 
@@ -55,4 +56,6 @@ npm run dev
 - [docs/MASTER_PLAN.md](docs/MASTER_PLAN.md) — Fasindelad plan med status
 - [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) — Arkitektur och riktlinjer
 - [docs/AI_BEHAVIOR.md](docs/AI_BEHAVIOR.md) — AI-beteende och regler
+- [docs/AI_FLOW.md](docs/AI_FLOW.md) — Flödesdiagram från request till svar
+- [docs/TEST_SCENARIOS.md](docs/TEST_SCENARIOS.md) — Testscenarier (legit + falska)
 - [docs/PROJECT_SETUP.md](docs/PROJECT_SETUP.md) — Setup-guide
