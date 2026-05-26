@@ -62,6 +62,13 @@ if (app.Environment.IsDevelopment())
 app.UseCors();
 app.UseAuthorization();
 
+// Serve React SPA from wwwroot
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.MapControllers();
+
+// SPA fallback – all non-API routes serve index.html
+app.MapFallbackToFile("index.html");
 
 app.Run();
