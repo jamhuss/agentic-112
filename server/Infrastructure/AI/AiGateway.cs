@@ -1,48 +1,62 @@
 using Application.Interfaces;
 using Domain.Models;
+using Infrastructure.AI.Parsing;
+using Infrastructure.AI.Prompts;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Options;
+using Infrastructure.AI.Configuration;
+using System.Text.Json;
 
 public class AiGateway : IAiGateway
 {
-    public Task<IncidentAnalysis> AnalyzeAsync(string description)
+    private readonly IChatClient _chat;
+    private readonly AiOptions _options;
+    private readonly ILogger<AiGateway> _logger;
+    private static readonly JsonElement SchemaElement =
+        JsonDocument.Parse(ClassificationPrompt.JsonSchema).RootElement.Clone();
+
+    public AiGateway(IChatClient chat, IOptions<AiOptions> options, ILogger<AiGateway> logger)
     {
-        // Fake classification - picks services/priority based on keywords
-        var services = new List<string>();
-        var priority = "low";
-        double confidence = 0.7;
+        _chat = chat;
+        _options = options.Value;
+        _logger = logger;
+    }
 
-        var lower = description.ToLowerInvariant();
+    public async Task<IncidentAnalysis> AnalyzeAsync(string description)
+    {
+        var messages = new List<ChatMessage>
+        {
+            new(ChatRole.System, ClassificationPrompt.System),
+            new(ChatRole.User, description)
+        };
 
-        if (lower.Contains("brand") || lower.Contains("eld"))
+        var chatOptions = new ChatOptions
         {
-            services.Add("fire");
-            priority = "high";
-            confidence = 0.9;
-        }
-        else if (lower.Contains("olycka") || lower.Contains("skadad"))
+            Temperature = (float)_options.Temperature,
+            ResponseFormat = ChatResponseFormat.ForJsonSchema(
+                SchemaElement,
+                "classification")
+        };
+
+        for (int attempt = 0; attempt <= _options.MaxRetries; attempt++)
         {
-            services.Add("ambulance");
-            priority = "high";
-            confidence = 0.85;
-        }
-        else if (lower.Contains("inbrott") || lower.Contains("stöld"))
-        {
-            services.Add("police");
-            priority = "medium";
-            confidence = 0.75;
-        }
-        else
-        {
-            services.Add("police");
-            confidence = 0.5;
+            var response = await _chat.GetResponseAsync(messages, chatOptions);
+            var text = response.Text ?? "";
+
+            _logger.LogDebug("Classification attempt {Attempt}: {Response}", attempt, text);
+
+            var result = AiResponseValidator.ValidateClassification(text);
+            if (result is not null)
+            {
+                var (services, priority, confidence, reasoning) = result.Value;
+                return new IncidentAnalysis(services, priority, confidence, reasoning);
+            }
+
+            _logger.LogWarning("Classification validation failed on attempt {Attempt}", attempt);
         }
 
-        var result = new IncidentAnalysis(
-            Services: services,
-            Priority: priority,
-            Confidence: confidence,
-            Reasoning: $"Fake classification based on keywords in: \"{description}\""
-        );
-
-        return Task.FromResult(result);
+        throw new InvalidOperationException(
+            $"AI classification failed after {_options.MaxRetries + 1} attempts for: \"{description}\"");
     }
 }
+

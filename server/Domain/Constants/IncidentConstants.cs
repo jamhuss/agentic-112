@@ -1,4 +1,4 @@
-﻿namespace server.Domain.Contstants
+﻿namespace server.Domain.Constants
 {
     public static class IncidentConstants
     {

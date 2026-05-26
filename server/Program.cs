@@ -1,6 +1,10 @@
 using Application.Interfaces;
 using Application.Services;
+using Azure.AI.OpenAI;
+using Infrastructure.AI.Configuration;
+using Microsoft.Extensions.AI;
 using Microsoft.OpenApi;
+using System.ClientModel;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +32,17 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod();
     });
 });
+
+// AI Configuration
+var aiSection = builder.Configuration.GetSection("AI");
+builder.Services.Configure<AiOptions>(aiSection);
+
+var aiOptions = aiSection.Get<AiOptions>()!;
+var credential = new ApiKeyCredential(aiOptions.ApiKey);
+var azureClient = new AzureOpenAIClient(new Uri(aiOptions.Endpoint), credential);
+
+builder.Services.AddSingleton<IChatClient>(
+    azureClient.GetChatClient(aiOptions.Model).AsIChatClient());
 
 // DI
 builder.Services.AddSingleton<IIncidentRepository, InMemoryIncidentRepository>();

@@ -1,7 +1,6 @@
 using Application.Interfaces;
 using Domain.Entities;
 using Domain.Models;
-using Microsoft.Extensions.Logging;
 
 namespace Application.Services;
 

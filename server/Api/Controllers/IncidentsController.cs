@@ -4,7 +4,7 @@ using Application.Interfaces;
 using Application.Services;
 using global::Domain.DTOS;
 using Microsoft.AspNetCore.Mvc;
-using server.Domain.Contstants;
+using server.Domain.Constants;
 
 [ApiController]
 [Route("api/incidents")]
