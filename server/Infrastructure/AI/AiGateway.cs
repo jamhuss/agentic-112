@@ -22,12 +22,18 @@ public class AiGateway : IAiGateway
         _logger = logger;
     }
 
-    public async Task<IncidentAnalysis> AnalyzeAsync(string description)
+    public async Task<IncidentAnalysis> AnalyzeAsync(string description, List<string>? userSelectedServices = null)
     {
+        var userMessage = description;
+        if (userSelectedServices is { Count: > 0 })
+        {
+            userMessage += $"\n\nOperatörens valda tjänster: [{string.Join(", ", userSelectedServices)}]. Granska om dessa är korrekta och tillräckliga.";
+        }
+
         var messages = new List<ChatMessage>
         {
             new(ChatRole.System, ClassificationPrompt.System),
-            new(ChatRole.User, description)
+            new(ChatRole.User, userMessage)
         };
 
         var chatOptions = new ChatOptions

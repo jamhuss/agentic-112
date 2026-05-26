@@ -11,6 +11,7 @@ function App() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingIncident, setEditingIncident] = useState<Incident | null>(null);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [isAgentic, setIsAgentic] = useState(false);
 
   async function loadIncidents() {
@@ -29,17 +30,30 @@ function App() {
   }, []);
 
   async function handleCreate(request: CreateManualRequest) {
-    if (isAgentic) {
-      await createAgenticIncident({ description: request.description });
-    } else {
-      await createManualIncident(request);
+    setSubmitting(true);
+    try {
+      if (isAgentic) {
+        await createAgenticIncident({ description: request.description });
+      } else {
+        await createManualIncident(request);
+      }
+      await loadIncidents();
+      setModalOpen(false);
+      setIsAgentic(false);
+    } finally {
+      setSubmitting(false);
     }
-    await loadIncidents();
   }
 
   async function handleUpdate(id: string, request: UpdateIncidentRequest) {
-    await updateIncident(id, request);
-    await loadIncidents();
+    setSubmitting(true);
+    try {
+      await updateIncident(id, request);
+      await loadIncidents();
+      setEditingIncident(null);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -73,6 +87,7 @@ function App() {
         onClose={() => { setModalOpen(false); setIsAgentic(false); }}
         onSubmit={handleCreate}
         isAgentic={isAgentic}
+        submitting={submitting}
       />
 
       <EditIncidentModal
@@ -80,6 +95,7 @@ function App() {
         incident={editingIncident}
         onClose={() => setEditingIncident(null)}
         onSubmit={handleUpdate}
+        submitting={submitting}
       />
     </div>
   );

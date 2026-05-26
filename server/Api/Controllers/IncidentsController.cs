@@ -54,7 +54,14 @@ public class IncidentsController : ControllerBase
         if (request.Status is not null && !IncidentConstants.Statuses.Contains(request.Status))
             return BadRequest($"Invalid status. Allowed: {string.Join(", ", IncidentConstants.Statuses)}");
 
-        if (request.Description is not null) incident.Description = request.Description;
+        // Content edit → reclassify via AI pipeline
+        if (request.Description is not null)
+        {
+            var result = await _service.ReclassifyAsync(incident, request.Description, request.Services);
+            return Ok(result);
+        }
+
+        // Status-only update (approve/reject)
         if (request.Services is not null) incident.Services = request.Services;
         if (request.Priority is not null) incident.Priority = request.Priority;
         if (request.Status is not null) incident.Status = request.Status;

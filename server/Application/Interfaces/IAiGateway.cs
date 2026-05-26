@@ -4,5 +4,5 @@ namespace Application.Interfaces;
 
 public interface IAiGateway
 {
-    Task<IncidentAnalysis> AnalyzeAsync(string description);
+    Task<IncidentAnalysis> AnalyzeAsync(string description, List<string>? userSelectedServices = null);
 }

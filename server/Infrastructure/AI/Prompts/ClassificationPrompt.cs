@@ -28,6 +28,8 @@ public static class ClassificationPrompt
         - Svara ALLTID med giltig JSON enligt schemat nedan
         - Motivera kort på svenska i "reasoning"
         - Confidence 0.9+ = mycket tydligt fall, 0.5-0.7 = osäkert
+        - Om operatörens valda tjänster anges: granska om de är korrekta och tillräckliga.
+          Påpeka i reasoning om kritiska tjänster saknas (t.ex. brand kräver räddningstjänst).
         """;
 
     public const string JsonSchema = """

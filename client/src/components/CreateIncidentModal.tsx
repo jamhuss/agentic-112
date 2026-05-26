@@ -10,9 +10,10 @@ interface Props {
     onClose: () => void;
     onSubmit: (request: CreateManualRequest) => void;
     isAgentic?: boolean;
+    submitting?: boolean;
 }
 
-export function CreateIncidentModal({ open, onClose, onSubmit, isAgentic = false }: Props) {
+export function CreateIncidentModal({ open, onClose, onSubmit, isAgentic = false, submitting = false }: Props) {
     const [description, setDescription] = useState("");
     const [services, setServices] = useState<string[]>([]);
     const [priority, setPriority] = useState<"critical" | "high" | "medium" | "low">("low");
@@ -34,7 +35,6 @@ export function CreateIncidentModal({ open, onClose, onSubmit, isAgentic = false
         setDescription("");
         setServices([]);
         setPriority("low");
-        onClose();
     }
 
     return (
@@ -89,15 +89,15 @@ export function CreateIncidentModal({ open, onClose, onSubmit, isAgentic = false
 
 
                     <div className="modal-actions">
-                        <button type="button" className="btn-secondary" onClick={onClose}>
+                        <button type="button" className="btn-secondary" onClick={onClose} disabled={submitting}>
                             Avbryt
                         </button>
                         <button
                             type="submit"
                             className="btn-primary"
-                            disabled={!description.trim() || (!isAgentic && services.length === 0)}
+                            disabled={submitting || !description.trim() || (!isAgentic && services.length === 0)}
                         >
-                            Skapa
+                            {submitting ? "Analyserar..." : "Skapa"}
                         </button>
                     </div>
                 </form>

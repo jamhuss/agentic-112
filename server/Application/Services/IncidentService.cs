@@ -28,15 +28,25 @@ public class IncidentService
         List<string> services,
         string priority)
     {
+        var analysis = await _ai.AnalyzeAsync(description, services);
+
         var incident = new Incident
         {
             Id = Guid.NewGuid(),
             Description = description,
-            Services = services,
-            Priority = priority,
+            Services = analysis.Services,
+            Priority = analysis.Priority,
+            Confidence = analysis.Confidence,
             CreatedBy = "User",
             CreatedAt = DateTime.UtcNow
         };
+
+        incident.Steps.Add(new PipelineStep(
+            "classification",
+            $"services: [{string.Join(", ", analysis.Services)}], priority: {analysis.Priority}, confidence: {analysis.Confidence}",
+            analysis.Reasoning,
+            DateTime.UtcNow
+        ));
 
         await _repo.SaveAsync(incident);
         await RunCredibilityCheck(incident);
@@ -68,6 +78,31 @@ public class IncidentService
         ));
 
         await _repo.SaveAsync(incident);
+        await RunCredibilityCheck(incident);
+        await _repo.UpdateAsync(incident);
+
+        return incident;
+    }
+
+    public async Task<Incident> ReclassifyAsync(Incident incident, string newDescription, List<string>? userSelectedServices = null)
+    {
+        incident.Description = newDescription;
+        incident.CreatedBy = "User";
+        incident.Steps.Clear();
+
+        var analysis = await _ai.AnalyzeAsync(newDescription, userSelectedServices);
+
+        incident.Services = analysis.Services;
+        incident.Priority = analysis.Priority;
+        incident.Confidence = analysis.Confidence;
+
+        incident.Steps.Add(new PipelineStep(
+            "classification",
+            $"services: [{string.Join(", ", analysis.Services)}], priority: {analysis.Priority}, confidence: {analysis.Confidence}",
+            analysis.Reasoning,
+            DateTime.UtcNow
+        ));
+
         await RunCredibilityCheck(incident);
         await _repo.UpdateAsync(incident);
 

@@ -10,9 +10,10 @@ interface Props {
   incident: Incident | null;
   onClose: () => void;
   onSubmit: (id: string, request: UpdateIncidentRequest) => void;
+  submitting?: boolean;
 }
 
-export function EditIncidentModal({ incident, onClose, onSubmit }: Props) {
+export function EditIncidentModal({ incident, onClose, onSubmit, submitting }: Props) {
   const [description, setDescription] = useState(incident?.description ?? "");
   const [services, setServices] = useState<string[]>(incident?.services ?? []);
   const [priority, setPriority] = useState(incident?.priority ?? "medium");
@@ -37,7 +38,6 @@ export function EditIncidentModal({ incident, onClose, onSubmit }: Props) {
       priority,
       status,
     });
-    onClose();
   }
 
   return (
@@ -100,15 +100,15 @@ export function EditIncidentModal({ incident, onClose, onSubmit }: Props) {
           </label>
 
           <div className="modal-actions">
-            <button type="button" className="btn-secondary" onClick={onClose}>
+            <button type="button" className="btn-secondary" onClick={onClose} disabled={submitting}>
               Avbryt
             </button>
             <button
               type="submit"
               className="btn-primary"
-              disabled={!description.trim()}
+              disabled={!description.trim() || submitting}
             >
-              Spara
+              {submitting ? "Analyserar..." : "Spara"}
             </button>
           </div>
         </form>
