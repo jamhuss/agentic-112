@@ -34,11 +34,11 @@ jobs:
         with:
           dotnet-version: '10.x'
 
-      - name: Build server with dotnet
-        run: dotnet build Agentic112.API/Agentic112.API.csproj --configuration Release
-
       - name: Publish server
         run: dotnet publish Agentic112.API/Agentic112.API.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp
+
+      - name: Verify wwwroot included
+        run: ls -la ${{env.DOTNET_ROOT}}/myapp/wwwroot/
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
