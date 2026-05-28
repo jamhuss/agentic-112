@@ -24,7 +24,7 @@ jobs:
           node-version: '22.x'
 
       - name: Build client
-        working-directory: ./client
+        working-directory: ./Agentic112.Client
         run: |
           npm ci
           npm run build
@@ -35,10 +35,10 @@ jobs:
           dotnet-version: '10.x'
 
       - name: Build server with dotnet
-        run: dotnet build server/server.csproj --configuration Release
+        run: dotnet build server/Agentic112.API.csproj --configuration Release
 
       - name: Publish server
-        run: dotnet publish server/server.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp
+        run: dotnet publish server/Agentic112.API.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4

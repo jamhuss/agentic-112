@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>5a2cacae-0421-4081-81a1-48e66d482718</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Agentic112.AI\Agentic112.AI.csproj" />
+    <ProjectReference Include="..\Agentic112.Domain\Agentic112.Domain.csproj" />
+    <ProjectReference Include="..\Agentic112.Infrastructure\Agentic112.Infrastructure.csproj" />
+    <ProjectReference Include="..\Agentic122.Application\Agentic122.Application.csproj" />
+  </ItemGroup>
+
+</Project>
