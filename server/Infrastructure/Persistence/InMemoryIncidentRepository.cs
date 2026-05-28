@@ -1,5 +1,5 @@
+using Agentic112.Domain.Entities;
 using Application.Interfaces;
-using Domain.Entities;
 
 public class InMemoryIncidentRepository : IIncidentRepository
 {

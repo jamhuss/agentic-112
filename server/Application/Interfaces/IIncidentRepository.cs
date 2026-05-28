@@ -1,5 +1,5 @@
 
-using Domain.Entities;
+using Agentic112.Domain.Entities;
 
 namespace Application.Interfaces;
 

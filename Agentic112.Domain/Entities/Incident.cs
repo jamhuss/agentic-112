@@ -1,6 +1,6 @@
-using Domain.Models;
+using Agentic112.Domain.Models;
 
-namespace Domain.Entities;
+namespace Agentic112.Domain.Entities;
 
 public class Incident
 {

@@ -1,10 +1,10 @@
 namespace server.Api.Controllers;
 
+using Agentic112.Domain.Constants;
+using Agentic112.Domain.DTOS;
 using Application.Interfaces;
 using Application.Services;
-using global::Domain.DTOS;
 using Microsoft.AspNetCore.Mvc;
-using server.Domain.Constants;
 
 [ApiController]
 [Route("api/incidents")]

@@ -1,4 +1,4 @@
-﻿namespace server.Domain.Constants
+﻿namespace Agentic112.Domain.Constants
 {
     public static class IncidentConstants
     {

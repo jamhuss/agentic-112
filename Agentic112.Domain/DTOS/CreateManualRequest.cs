@@ -1,4 +1,4 @@
-namespace Domain.DTOS;
+namespace Agentic112.Domain.DTOS;
 
 public record CreateManualRequest(
     string Description,

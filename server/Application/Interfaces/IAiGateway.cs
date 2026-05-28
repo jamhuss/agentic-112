@@ -1,4 +1,4 @@
-using Domain.Models;
+using Agentic112.Domain.Models;
 
 namespace Application.Interfaces;
 

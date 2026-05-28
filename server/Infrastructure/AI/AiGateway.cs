@@ -1,11 +1,11 @@
 using Application.Interfaces;
-using Domain.Models;
 using Infrastructure.AI.Parsing;
 using Infrastructure.AI.Prompts;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Infrastructure.AI.Configuration;
 using System.Text.Json;
+using Agentic112.Domain.Models;
 
 public class AiGateway : IAiGateway
 {

@@ -1,5 +1,4 @@
-
-namespace Domain.Models;
+namespace Agentic112.Domain.Models;
 
 public record IncidentAnalysis(
     List<string> Services,

@@ -1,4 +1,4 @@
-namespace Domain.Models;
+namespace Agentic112.Domain.Models;
 
 public record CredibilityAssessment(
     string Credibility,
