@@ -4,14 +4,15 @@
 
 Clean architecture backend with AI as a two-step pipeline component, and a React frontend.
 
-### Backend structure (`/server`)
+### Backend structure
 
-- **Api** → Controllers (HTTP endpoints, no business logic)
-- **Application** → Services + interfaces (business logic, orchestration)
-- **Domain** → Entities, models, DTOs, constants (no dependencies)
-- **Infrastructure** → AI gateways + persistence (implementation details)
+- **Agentic112.API** → Controllers (HTTP endpoints, no business logic)
+- **Agentic122.Application** → Services + interfaces (business logic, orchestration)
+- **Agentic112.Domain** → Entities, models, DTOs, constants (no dependencies)
+- **Agentic112.AI** → AI gateways, prompts, parsing, configuration
+- **Agentic112.Infrastructure** → Persistence (InMemoryRepository)
 
-### Frontend structure (`/client`)
+### Frontend structure (`/Agentic112.Client`)
 
 - React + TypeScript + Vite
 - Proxy `/api` → backend at `http://localhost:5236`

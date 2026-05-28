@@ -10,36 +10,35 @@ Ett ärendehanteringssystem för nödsituationer med **tvåstegs AI-pipeline**: 
 
 > Fas 1–5 är implementerade och verifierade. Systemet kör end-to-end med riktig AI (Azure OpenAI GPT-4o).
 
-### Backend (`/server`) ✅
+### Backend ✅
 
-- **Domain/Entities/Incident.cs** — Id, Description, Services, Priority, Status(`"pending_review"`), CreatedBy, Confidence, Credibility, NeedsHumanReview, `List<PipelineStep> Steps`, CreatedAt
-- **Domain/Models/IncidentAnalysis.cs** — `record(Services, Priority, Confidence?, Reasoning)`
-- **Domain/Models/CredibilityAssessment.cs** — `record(Credibility, NeedsHumanReview, Reasoning)`
-- **Domain/Models/PipelineStep.cs** — `record(Name, Result, Reasoning, Timestamp)`
-- **Domain/DTOS/** — CreateManualRequest, CreateAiRequest, UpdateIncidentRequest
-- **Domain/Contstants/IncidentConstants.cs** — Services, Priorities, CredibilityLevels, Statuses
-- **Application/Interfaces/** — IAiGateway, ICredibilityGateway, IIncidentRepository
-- **Application/Services/IncidentService.cs** — Tvåstegsflöde: klassificering + trovärdighetskontroll, statuslogik, felhantering med fallback till flagged
-- **Infrastructure/AI/AiGateway.cs** — Riktig GPT-4o via IChatClient, structured output, retry + validering
-- **Infrastructure/AI/CredibilityGateway.cs** — Riktig GPT-4o via IChatClient, structured output, retry + validering
-- **Infrastructure/AI/Prompts/ClassificationPrompt.cs** — System prompt + JSON schema för klassificering
-- **Infrastructure/AI/Prompts/CredibilityPrompt.cs** — System prompt + JSON schema för trovärdighet
-- **Infrastructure/AI/Parsing/AiResponseValidator.cs** — Validerar AI-svar mot IncidentConstants
-- **Infrastructure/AI/Configuration/AiOptions.cs** — Endpoint, Model, Temperature, MaxRetries, ApiKey
-- **Infrastructure/Persistence/InMemoryIncidentRepository.cs** — Trådsäker med `lock`
-- **Api/Controllers/IncidentsController.cs** — POST manual, POST ai, GET all, PATCH {id} (med statusvalidering), POST {id}/validate, GET constants
-- **Program.cs** — DI (IChatClient via AzureOpenAIClient, IAiGateway, ICredibilityGateway, IncidentService), CORS, Swagger
-- **appsettings.json** — AI-sektion (Endpoint, Model, Temperature, MaxRetries)
+- **Agentic112.Domain/Entities/Incident.cs** — Id, Description, Services, Priority, Status(`"pending_review"`), CreatedBy, Confidence, Credibility, NeedsHumanReview, `List<PipelineStep> Steps`, CreatedAt
+- **Agentic112.Domain/Models/IncidentAnalysis.cs** — `record(Services, Priority, Confidence?, Reasoning)`
+- **Agentic112.Domain/Models/CredibilityAssessment.cs** — `record(Credibility, NeedsHumanReview, Reasoning)`
+- **Agentic112.Domain/Models/PipelineStep.cs** — `record(Name, Result, Reasoning, Timestamp)`
+- **Agentic112.Domain/DTOS/** — CreateManualRequest, CreateAiRequest, UpdateIncidentRequest
+- **Agentic112.Domain/Constants/IncidentConstants.cs** — Services, Priorities, CredibilityLevels, Statuses
+- **Agentic122.Application/Interfaces/** — IAiGateway, ICredibilityGateway, IIncidentRepository
+- **Agentic122.Application/Services/IncidentService.cs** — Tvåstegsflöde: klassificering + trovärdighetskontroll, statuslogik, felhantering med fallback till flagged
+- **Agentic112.AI/AiGateway.cs** — Riktig GPT-4o via IChatClient, structured output, retry + validering
+- **Agentic112.AI/CredibilityGateway.cs** — Riktig GPT-4o via IChatClient, structured output, retry + validering
+- **Agentic112.AI/Prompts/ClassificationPrompt.cs** — System prompt + JSON schema för klassificering
+- **Agentic112.AI/Prompts/CredibilityPrompt.cs** — System prompt + JSON schema för trovärdighet
+- **Agentic112.AI/Parsing/AiResponseValidator.cs** — Validerar AI-svar mot IncidentConstants
+- **Agentic112.AI/Configuration/AiOptions.cs** — Endpoint, Model, Temperature, MaxRetries, ApiKey
+- **Agentic112.Infrastructure/Persistence/InMemoryIncidentRepository.cs** — Trådsäker med `lock`
+- **Agentic112.API/Controllers/IncidentsController.cs** — POST manual, POST ai, GET all, PATCH {id} (med statusvalidering), POST {id}/validate, GET constants
+- **Agentic112.API/Program.cs** — DI (IChatClient via AzureOpenAIClient, IAiGateway, ICredibilityGateway, IncidentService), CORS, Swagger
+- **Agentic112.API/appsettings.json** — AI-sektion (Endpoint, Model, Temperature, MaxRetries)
 - **User Secrets** — AI:ApiKey (aldrig i git)
 
-### Frontend (`/client`) ✅
+### Frontend (`/Agentic112.Client`) ✅
 
 - React + TypeScript + Vite, proxy `/api` → `http://localhost:5236`
 - **Kortvy** med IncidentCard-komponenter (ersätter tidigare tabellvy)
 - **PipelineSteps.tsx** — Visar ✅/❌ per steg med reasoning
 - **IncidentCard.tsx** — Metadata, status-badge, pipeline-steg, Godkänn/Avvisa-knappar för flaggade
-- **CreateIncidentModal** — Manuellt + AI-läge (AI visar bara beskrivningsfält)
-- **EditIncidentModal** — Alla fem statusar, services valfritt, explicit knapp för "Validera med AI"
+- **IncidentModal** — Enhetlig modal med tre lägen (create/agentic/edit). Edit-läge har alla fem statusar, services valfritt, och explicit knapp för "Validera med AI"
 - **labels.ts** — Svenska labels för alla statusar (pending_review, ongoing, flagged, rejected, closed)
 - **api.ts** — fetchIncidents, createManualIncident, createAgenticIncident (bara description), updateIncident
 - **types.ts** — Incident (med steps), PipelineStep, CreateManualRequest, CreateAiRequest, UpdateIncidentRequest
@@ -154,8 +153,8 @@ Om `ICredibilityGateway.AssessAsync()` kastar exception:
 
 ### Uppgifter
 
-- [x] **Infrastructure/AI/AiGateway.cs** — Uppdatera: returnera `IncidentAnalysis` UTAN credibility-fält. **Fixa värden:** använd `"ambulance"` (inte `"Ambulans"`), `"high"` (inte `"High"`) — måste matcha `IncidentConstants`
-- [x] **Infrastructure/AI/CredibilityGateway.cs** — NY implementation av `ICredibilityGateway`:
+- [x] **Agentic112.AI/AiGateway.cs** — Uppdatera: returnera `IncidentAnalysis` UTAN credibility-fält. **Fixa värden:** använd `"ambulance"` (inte `"Ambulans"`), `"high"` (inte `"High"`) — måste matcha `IncidentConstants`
+- [x] **Agentic112.AI/CredibilityGateway.cs** — NY implementation av `ICredibilityGateway`:
   - Beskrivning innehåller "test" / "hej" / "asdf" → `low`, `needsHumanReview: true`, `"Ser ut som ett test"`
   - Beskrivning < 10 tecken → `low`, `needsHumanReview: true`, `"För kort beskrivning för att bedöma"`
   - Annars → `high`, `needsHumanReview: false`, `"Realistisk och trovärdig beskrivning"`
@@ -196,7 +195,7 @@ Om `ICredibilityGateway.AssessAsync()` kastar exception:
   - Edit-knapp
   - Flaggade ärenden: "Godkänn" / "Avvisa"-knappar (anropar PATCH med `status: "ongoing"` resp. `status: "rejected"`)
 - [x] **components/IncidentList.tsx** — Ändra till att rendera `IncidentCard` istället för tabell
-- [x] **components/EditIncidentModal.tsx** — Uppdatera status-dropdown med alla fem statusar. Fixa: gör services-validering valfri (tillåt submit utan services vid redigering)
+- [x] **components/IncidentModal.tsx** — Enhetlig modal (create/agentic/edit) med status-dropdown, valfri services-validering vid redigering
 - [x] **App.css** — Nya styles:
   - Kortstyles (bakgrund, skugga, padding)
   - Pipeline-steg (ikon + text)
@@ -233,10 +232,10 @@ Om `ICredibilityGateway.AssessAsync()` kastar exception:
 | Output-format | Structured Outputs (JSON Schema) |
 | Konfiguration | `appsettings.json` + User Secrets |
 
-### Ny mappstruktur under `Infrastructure/AI/`
+### Mappstruktur `Agentic112.AI/`
 
 ```
-Infrastructure/AI/
+Agentic112.AI/
 ├── AiGateway.cs                  ← Implementerar IAiGateway med IChatClient
 ├── CredibilityGateway.cs         ← Implementerar ICredibilityGateway med IChatClient
 ├── Prompts/
@@ -250,8 +249,8 @@ Infrastructure/AI/
 
 ### Uppgifter
 
-- [x] **server.csproj** — Lägg till `Microsoft.Extensions.AI.OpenAI` NuGet-paket
-- [x] **Infrastructure/AI/Configuration/AiOptions.cs** — NY:
+- [x] **Agentic112.API.csproj** — Lägg till `Microsoft.Extensions.AI.OpenAI` NuGet-paket
+- [x] **Agentic112.AI/Configuration/AiOptions.cs** — NY:
   ```csharp
   public class AiOptions
   {
@@ -263,19 +262,19 @@ Infrastructure/AI/
   ```
 - [x] **appsettings.json** — Lägg till AI-sektion (utan hemligheter)
 - [x] **User Secrets** — `dotnet user-secrets set "AI:ApiKey" "..."`
-- [x] **Infrastructure/AI/Prompts/ClassificationPrompt.cs** — NY:
+- [x] **Agentic112.AI/Prompts/ClassificationPrompt.cs** — NY:
   - System prompt: "Du är en SOS Alarm-operatör..."
   - JSON schema som tvingar: services (enum), priority (enum), confidence (0-1), reasoning
-- [x] **Infrastructure/AI/Prompts/CredibilityPrompt.cs** — NY:
+- [x] **Agentic112.AI/Prompts/CredibilityPrompt.cs** — NY:
   - System prompt: "Bedöm trovärdigheten..."
   - JSON schema: credibility (enum), needsHumanReview (bool), reasoning
-- [x] **Infrastructure/AI/Parsing/AiResponseValidator.cs** — NY:
+- [x] **Agentic112.AI/Parsing/AiResponseValidator.cs** — NY:
   - Validera services mot `IncidentConstants.Services`
   - Validera priority mot `IncidentConstants.Priorities`
   - Validera credibility mot `IncidentConstants.CredibilityLevels`
   - Om ogiltigt → retry 1x → fallback till `flagged` + `needsHumanReview = true`
-- [x] **Infrastructure/AI/AiGateway.cs** — Omskriv med `IChatClient`, prompt, structured output
-- [x] **Infrastructure/AI/CredibilityGateway.cs** — Omskriv med `IChatClient`, prompt, structured output
+- [x] **Agentic112.AI/AiGateway.cs** — Omskriv med `IChatClient`, prompt, structured output
+- [x] **Agentic112.AI/CredibilityGateway.cs** — Omskriv med `IChatClient`, prompt, structured output
 - [x] **Program.cs** — Registrera `IChatClient`, bind `AiOptions` från config
 
 ---
@@ -347,5 +346,5 @@ dotnet run
 # Frontend
 cd client
 npm run dev
-# → http://localhost:3000
+# → http://localhost:112
 ```

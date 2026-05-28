@@ -39,16 +39,16 @@ ongoing        → closed      (ärende avslutat)
 
 ```bash
 # Backend
-cd server
+cd Agentic112.API
 dotnet user-secrets set "AI:ApiKey" "din-azure-openai-nyckel"
 dotnet run
 # → http://localhost:5236/swagger
 
 # Frontend
-cd client
+cd Agentic112.Client
 npm install
 npm run dev
-# → http://localhost:3000
+# → http://localhost:112
 ```
 
 ## Dokumentation
