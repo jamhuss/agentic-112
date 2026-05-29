@@ -72,11 +72,11 @@ sequenceDiagram
     API->>SVC: ValidateAsync(incident)
     
     Note over SVC,AI: Klassificering + granskning
-    SVC->>AI: AnalyzeAsync(description, userServices, userPriority)
-    AI-->>SVC: IncidentAnalysis (AI:ns förslag)
-    
-    SVC->>SVC: Jämför tjänster + prioritet
-    SVC->>SVC: Korrigerar vid avvikelse
+    SVC->>AI: ValidateAsync(description, userServices, userPriority)
+    AI-->>SVC: IncidentValidation(aiSuggestedServices, missingServices, extraServices, suggestedPriority, confidence, reasoning)
+
+    SVC->>SVC: Använder AI:s valideringsresultat direkt (aiSuggested/missing/extra)
+    SVC->>SVC: Korrigerar endast om `aiSuggestedServices` inte är tom
     SVC->>SVC: Lägger till PipelineStep("classification_validation")
     
     Note over SVC,CRED: Trovärdighetskontroll

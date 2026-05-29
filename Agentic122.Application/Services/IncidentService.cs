@@ -104,13 +104,15 @@ public class IncidentService
 
         try
         {
-            var analysis = await _ai.AnalyzeAsync(incident.Description, incident.Services, incident.Priority);
-            incident.Confidence = analysis.Confidence;
+            // Use AI's validation response which includes suggested services and explicit missing/extra lists
+            var validation = await _ai.ValidateAsync(incident.Description, incident.Services, incident.Priority);
+
+            incident.Confidence = validation.Confidence;
 
             var selectedServices = incident.Services;
-            var aiSuggestedServices = analysis.Services;
-            var missingServices = aiSuggestedServices.Except(selectedServices).ToList();
-            var extraServices = selectedServices.Except(aiSuggestedServices).ToList();
+            var aiSuggestedServices = validation.AiSuggestedServices ?? new List<string>();
+            var missingServices = validation.MissingServices ?? new List<string>();
+            var extraServices = validation.ExtraServices ?? new List<string>();
             var servicesMatch = missingServices.Count == 0 && extraServices.Count == 0;
 
             var validationResult =
@@ -118,34 +120,25 @@ public class IncidentService
                 $"aiSuggestedServices: [{string.Join(", ", aiSuggestedServices)}], " +
                 $"missing: [{string.Join(", ", missingServices)}], " +
                 $"extra: [{string.Join(", ", extraServices)}], " +
-                $"suggestedPriority: {analysis.Priority}, " +
+                $"suggestedPriority: {validation.SuggestedPriority}, " +
                 $"servicesMatch: {servicesMatch}";
 
-            var priorityMatch = incident.Priority == analysis.Priority;
+            var priorityMatch = incident.Priority == validation.SuggestedPriority;
 
-            var validationReasoning = analysis.Reasoning;
-            if (!servicesMatch || !priorityMatch)
-            {
-                var issues = new List<string>();
-                if (missingServices.Count > 0)
-                    issues.Add($"Saknar: {string.Join(", ", missingServices)}");
-                if (extraServices.Count > 0)
-                    issues.Add($"Överflödiga: {string.Join(", ", extraServices)}");
-                if (!priorityMatch)
-                    issues.Add($"Prioritet korrigerad från {incident.Priority} till {analysis.Priority}");
-                validationReasoning = $"{string.Join(". ", issues)}. {analysis.Reasoning}";
-            }
+            // Use AI's reasoning as authoritative for this validation step
+            var validationReasoning = validation.Reasoning;
 
             // Korrigera prioritet till AI:ns bedömning
             if (!priorityMatch)
             {
-                incident.Priority = analysis.Priority;
+                incident.Priority = validation.SuggestedPriority;
             }
 
             // Korrigera tjänster till AI:ns bedömning
-            if (!servicesMatch)
+            // Only auto-correct services when AI actually suggests services.
+            if (!servicesMatch && aiSuggestedServices.Count > 0)
             {
-                incident.Services = analysis.Services;
+                incident.Services = aiSuggestedServices;
             }
 
             incident.Steps.Add(new PipelineStep(
@@ -157,7 +150,7 @@ public class IncidentService
 
             await RunCredibilityCheck(incident);
 
-            if (!servicesMatch || !priorityMatch || incident.Credibility != "high")
+            if (aiSuggestedServices.Count == 0 || !servicesMatch || !priorityMatch || incident.Credibility != "high")
             {
                 incident.NeedsHumanReview = true;
                 incident.Status = "flagged";

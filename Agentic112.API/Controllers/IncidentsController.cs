@@ -10,19 +10,19 @@ using Microsoft.AspNetCore.Mvc;
 [Route("api/incidents")]
 public class IncidentsController : ControllerBase
 {
-    private readonly IncidentService _service;
+    private readonly IncidentService _incidentService;
     private readonly IIncidentRepository _repo;
 
     public IncidentsController(IncidentService service, IIncidentRepository repo)
     {
-        _service = service;
+        _incidentService = service;
         _repo = repo;
     }
 
     [HttpPost("manual")]
     public async Task<IActionResult> CreateManual([FromBody] CreateManualRequest request)
     {
-        var result = await _service.CreateManualAsync(
+        var result = await _incidentService.CreateManualAsync(
             request.Description,
             request.Services,
             request.Priority
@@ -34,7 +34,7 @@ public class IncidentsController : ControllerBase
     [HttpPost("ai")]
     public async Task<IActionResult> CreateAi([FromBody] CreateAiRequest request)
     {
-        var result = await _service.CreateFromAiAsync(request.Description);
+        var result = await _incidentService.CreateFromAiAsync(request.Description);
         return Ok(result);
     }
 
@@ -70,7 +70,7 @@ public class IncidentsController : ControllerBase
         // AI-ärende med ändrad beskrivning → kör om hela pipelinen automatiskt
         if (wasAiCreated && descriptionChanged)
         {
-            var result = await _service.ValidateAsync(incident);
+            var result = await _incidentService.ValidateAsync(incident);
             return Ok(result);
         }
 
@@ -103,7 +103,7 @@ public class IncidentsController : ControllerBase
             incident.CreatedBy = "User";
         }
 
-        var result = await _service.ValidateAsync(incident);
+        var result = await _incidentService.ValidateAsync(incident);
         return Ok(result);
     }
 

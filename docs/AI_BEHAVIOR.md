@@ -12,14 +12,16 @@ AI:n agerar som en erfaren nödcentral-operatör. Den ska:
 - Tilldela rätt tjänster (`ambulance`, `police`, `fire_department`, `assistance`)
 - Sätta prioritet (`critical`, `high`, `medium`, `low`)
 - Ange confidence (0.0–1.0) för hur säker den är
-- Motivera kort och naturligt på svenska i `reasoning`
-- Orealistiska/omöjliga scenarion: ALLTID low priority + confidence < 0.2
+	- Motivera kort och naturligt på svenska i `reasoning`
+	- OREALISTISKA/OMÖJLIGA scenarion (drakar, zombies, magi etc): sätt normalt `low` priority och låg `confidence`.
+	- Om scenariot är fysiskt omöjligt ska prioriteten ALDRIG vara `critical` eller `high`.
+	- Viktigt: om inga tjänster rekommenderas (t.ex. busringning eller uppenbart orealistiskt) ska AI returnera en TOM ARRAY i fältet `services` (dvs. []). Systemet förlitar sig på den tomma listan och gör inte egna hårdkodade trösklar i service-lagret.
 
 **Vid validering av operatörens val:**
-- Granskar om valda tjänster är korrekta och tillräckliga
-- Granskar om prioritet är rimlig
-- Korrigerar tjänster och prioritet om de avviker
-- Kort reasoning vid OK (max 15 ord), längre förklaring vid avvikelse
+- AI:n kan anropas via `ValidateAsync` och returnerar ett strukturerat valideringsresultat med följande fält: `aiSuggestedServices`, `missingServices`, `extraServices`, `suggestedPriority`, `confidence`, `reasoning`.
+- Systemet använder AI:s listor direkt: om `aiSuggestedServices` är icke-tom kan tjänster korrigeras automatiskt; om `aiSuggestedServices` är tom behålls operatörens val och ärendet markeras för manuell granskning.
+- Granskar om prioritet är rimlig och kan korrigera den till `suggestedPriority`.
+- `reasoning` ska vara kort vid OK (max 15 ord) och något längre vid avvikelse.
 
 **Begränsningar:**
 - Får ALDRIG hitta på nya tjänster utanför listan

@@ -14,17 +14,24 @@ Ett ärendehanteringssystem för nödsituationer med **tvåstegs AI-pipeline**: 
 
 - **Agentic112.Domain/Entities/Incident.cs** — Id, Description, Services, Priority, Status(`"pending_review"`), CreatedBy, Confidence, Credibility, NeedsHumanReview, `List<PipelineStep> Steps`, CreatedAt
 - **Agentic112.Domain/Models/IncidentAnalysis.cs** — `record(Services, Priority, Confidence?, Reasoning)`
+- **Agentic112.Domain/Models/IncidentAnalysis.cs** — `record(Services, Priority, Confidence?, Reasoning)`
+- **Agentic112.Domain/Models/IncidentValidation.cs** — `record(AiSuggestedServices, MissingServices, ExtraServices, SuggestedPriority, Confidence, Reasoning)`
 - **Agentic112.Domain/Models/CredibilityAssessment.cs** — `record(Credibility, NeedsHumanReview, Reasoning)`
 - **Agentic112.Domain/Models/PipelineStep.cs** — `record(Name, Result, Reasoning, Timestamp)`
 - **Agentic112.Domain/DTOS/** — CreateManualRequest, CreateAiRequest, UpdateIncidentRequest
 - **Agentic112.Domain/Constants/IncidentConstants.cs** — Services, Priorities, CredibilityLevels, Statuses
 - **Agentic122.Application/Interfaces/** — IAiGateway, ICredibilityGateway, IIncidentRepository
+- **Agentic122.Application/Interfaces/** — IAiGateway (nytt `ValidateAsync`), ICredibilityGateway, IIncidentRepository
 - **Agentic122.Application/Services/IncidentService.cs** — Tvåstegsflöde: klassificering + trovärdighetskontroll, statuslogik, felhantering med fallback till flagged
 - **Agentic112.AI/AiGateway.cs** — Riktig GPT-4o via IChatClient, structured output, retry + validering
 - **Agentic112.AI/CredibilityGateway.cs** — Riktig GPT-4o via IChatClient, structured output, retry + validering
 - **Agentic112.AI/Prompts/ClassificationPrompt.cs** — System prompt + JSON schema för klassificering
 - **Agentic112.AI/Prompts/CredibilityPrompt.cs** — System prompt + JSON schema för trovärdighet
 - **Agentic112.AI/Parsing/AiResponseValidator.cs** — Validerar AI-svar mot IncidentConstants
+ - **Agentic112.AI/Prompts/ClassificationPrompt.cs** — System prompt + JSON schema för klassificering
+ - **Agentic112.AI/Prompts/ValidationPrompt.cs** — System prompt + JSON schema för validering (aiSuggested/missing/extra)
+ - **Agentic112.AI/Prompts/CredibilityPrompt.cs** — System prompt + JSON schema för trovärdighet
+ - **Agentic112.AI/Parsing/AiResponseValidator.cs** — Validerar AI-svar mot IncidentConstants (inkl. `ValidateValidation` för valideringsschemat)
 - **Agentic112.AI/Configuration/AiOptions.cs** — Endpoint, Model, Temperature, MaxRetries, ApiKey
 - **Agentic112.Infrastructure/Persistence/InMemoryIncidentRepository.cs** — Trådsäker med `lock`
 - **Agentic112.API/Controllers/IncidentsController.cs** — POST manual, POST ai, GET all, PATCH {id} (med statusvalidering), POST {id}/validate, GET constants
@@ -240,6 +247,7 @@ Agentic112.AI/
 ├── CredibilityGateway.cs         ← Implementerar ICredibilityGateway med IChatClient
 ├── Prompts/
 │   ├── ClassificationPrompt.cs   ← System prompt + JSON schema för klassificering
+│   ├── ValidationPrompt.cs       ← System prompt + JSON schema för validering (aiSuggested/missing/extra)
 │   └── CredibilityPrompt.cs      ← System prompt + JSON schema för trovärdighet
 ├── Parsing/
 │   └── AiResponseValidator.cs    ← Validerar att AI-svar matchar IncidentConstants
@@ -274,6 +282,9 @@ Agentic112.AI/
   - Validera credibility mot `IncidentConstants.CredibilityLevels`
   - Om ogiltigt → retry 1x → fallback till `flagged` + `needsHumanReview = true`
 - [x] **Agentic112.AI/AiGateway.cs** — Omskriv med `IChatClient`, prompt, structured output
+- [x] **Agentic112.AI/Prompts/ValidationPrompt.cs** — NY:
+  - System prompt: "Jämför operatörens val mot vad AI rekommenderar"
+  - JSON schema: `aiSuggestedServices`, `missingServices`, `extraServices`, `suggestedPriority`, `confidence`, `reasoning`
 - [x] **Agentic112.AI/CredibilityGateway.cs** — Omskriv med `IChatClient`, prompt, structured output
 - [x] **Program.cs** — Registrera `IChatClient`, bind `AiOptions` från config
 

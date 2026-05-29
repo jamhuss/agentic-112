@@ -15,6 +15,8 @@ public class AiGateway : IAiGateway
     private readonly ILogger<AiGateway> _logger;
     private static readonly JsonElement SchemaElement =
         JsonDocument.Parse(ClassificationPrompt.JsonSchema).RootElement.Clone();
+    private static readonly JsonElement ValidationSchemaElement =
+        JsonDocument.Parse(ValidationPrompt.JsonSchema).RootElement.Clone();
 
     public AiGateway(IChatClient chat, IOptions<AiOptions> options, ILogger<AiGateway> logger)
     {
@@ -69,6 +71,52 @@ public class AiGateway : IAiGateway
 
         throw new InvalidOperationException(
             $"AI classification failed after {_options.MaxRetries + 1} attempts for: \"{description}\"");
+    }
+
+    public async Task<Agentic112.Domain.Models.IncidentValidation> ValidateAsync(string description, List<string>? userSelectedServices = null, string? userSelectedPriority = null)
+    {
+        var userMessage = description;
+
+            var parts = new List<string>();
+            if (userSelectedServices is { Count: > 0 })
+                parts.Add($"Operatörens valda tjänster: [{string.Join(", ", userSelectedServices)}]");
+            if (userSelectedPriority is not null)
+                parts.Add($"Operatörens valda prioritet: {userSelectedPriority}");
+            userMessage += $"\n\n{string.Join(". ", parts)}. Jämför och lista saknade/överflödiga tjänster.";
+
+
+        var messages = new List<ChatMessage>
+        {
+            new(ChatRole.System, ValidationPrompt.System),
+            new(ChatRole.User, userMessage)
+        };
+
+        var chatOptions = new ChatOptions
+        {
+            Temperature = (float)_options.Temperature,
+            ResponseFormat = ChatResponseFormat.ForJsonSchema(
+                ValidationSchemaElement,
+                "validation")
+        };
+
+        for (int attempt = 0; attempt <= _options.MaxRetries; attempt++)
+        {
+            var response = await _chat.GetResponseAsync(messages, chatOptions);
+            var text = response.Text ?? "";
+
+            _logger.LogDebug("Validation attempt {Attempt}: {Response}", attempt, text);
+
+            var result = AiResponseValidator.ValidateValidation(text);
+            if (result is not null)
+            {
+                return result;
+            }
+
+            _logger.LogWarning("Validation validation failed on attempt {Attempt}", attempt);
+        }
+
+        throw new InvalidOperationException(
+            $"AI validation failed after {_options.MaxRetries + 1} attempts for: \"{description}\"");
     }
 }
 

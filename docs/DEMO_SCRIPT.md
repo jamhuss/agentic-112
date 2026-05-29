@@ -75,11 +75,28 @@ builder.Services.AddSingleton<ICredibilityGateway, CredibilityGateway>();
 ### Visa kod: `IncidentService.ValidateAsync`
 
 ```csharp
-var analysis = await _ai.AnalyzeAsync(incident.Description, incident.Services, incident.Priority);
+var validation = await _ai.ValidateAsync(incident.Description, incident.Services, incident.Priority);
 
-// Korrigera vid avvikelse
-if (!priorityMatch) incident.Priority = analysis.Priority;
-if (!servicesMatch) incident.Services = analysis.Services;
+// Använd AI:ns valideringsresultat direkt
+var aiSuggested = validation.AiSuggestedServices;
+var missing = validation.MissingServices;
+var extra = validation.ExtraServices;
+var reason = validation.Reasoning;
+
+if (incident.Priority != validation.SuggestedPriority)
+{
+    incident.Priority = validation.SuggestedPriority;
+}
+
+if (aiSuggested.Count > 0)
+{
+    // AI föreslog tjänster — korrigera till AI:ns förslag
+    incident.Services = aiSuggested;
+}
+else
+{
+    // AI föreslog inga tjänster — behåll operatörens val och flagga för manuell granskning
+}
 ```
 
 > "AI:n får med operatörens val som kontext – men AI:ns klassificering avgör slutresultatet. Och reasoning förklarar vad som ändrades och varför."
@@ -96,9 +113,9 @@ ResponseFormat = ChatResponseFormat.ForJsonSchema(SchemaElement, "classification
 
 > "Structured Outputs – JSON Schema tvingar GPT-4o att svara i exakt format. Inga regex-hack."
 
-### Visa kod: `AiResponseValidator.ValidateClassification`
+### Visa kod: `AiResponseValidator.ValidateClassification` / `ValidateValidation`
 
-> "Men vi litar inte blint. Vi validerar ändå – för defense in depth. Finns services i vår tillåtna lista? Är priority en giltig sträng? Confidence mellan 0 och 1? Om valideringen misslyckas → retry."
+> "Vi validerar AI:s strukturerade output mot våra domänkonstanter. `ValidateClassification` hanterar klassificeringsschemat; `ValidateValidation` hanterar valideringsschemat (aiSuggested/missing/extra). Om valideringen misslyckas → retry."
 
 ---
 
