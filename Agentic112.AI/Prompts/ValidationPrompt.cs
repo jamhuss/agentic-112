@@ -11,7 +11,8 @@ public static class ValidationPrompt
         2. Ange vilka tjänster som saknas i operatörens val (`missingServices`). RETURNERA en tom array om inget saknas.
         3. Ange vilka tjänster operatören har valt men som inte behövs (`extraServices`). RETURNERA en tom array om inget är överflödigt.
         4. Föreslå en prioritet (`suggestedPriority`) och ange hur säker du är (`confidence` 0.0–1.0).
-        5. Motivera kort i `reasoning`.
+        5. Skriv en kort teknisk sammanfattning av jämförelsen i `summary` (t.ex. vilka tjänster som matchar, saknas eller är överflödiga och om prioriteten avviker).
+        6. Motivera kort i `reasoning`.
 
         TILLÅTNA TJÄNSTER (välj en eller flera):
         - ambulance
@@ -65,11 +66,14 @@ public static class ValidationPrompt
               "minimum": 0.0,
               "maximum": 1.0
             },
+            "summary": {
+              "type": "string"
+            },
             "reasoning": {
               "type": "string"
             }
           },
-          "required": ["aiSuggestedServices", "missingServices", "extraServices", "suggestedPriority", "confidence", "reasoning"],
+          "required": ["aiSuggestedServices", "missingServices", "extraServices", "suggestedPriority", "confidence", "summary", "reasoning"],
           "additionalProperties": false
         }
         """;

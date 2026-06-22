@@ -24,9 +24,6 @@ public static class AiResponseValidator
             var confidence = root.GetProperty("confidence").GetDouble();
             var reasoning = root.GetProperty("reasoning").GetString() ?? "";
 
-            // Allow empty services list (e.g., prank or unrealistic scenarios).
-            // Previously an empty list was treated as invalid; now we accept it and
-            // return an empty list so the caller can decide how to handle it.
             if (!IncidentConstants.Priorities.Contains(priority)) return null;
             if (confidence < 0 || confidence > 1) confidence = Math.Clamp(confidence, 0, 1);
 
@@ -65,12 +62,13 @@ public static class AiResponseValidator
 
             var suggestedPriority = root.GetProperty("suggestedPriority").GetString()!;
             var confidence = root.GetProperty("confidence").GetDouble();
+            var summary = root.GetProperty("summary").GetString() ?? string.Empty;
             var reasoning = root.GetProperty("reasoning").GetString() ?? string.Empty;
 
             if (!IncidentConstants.Priorities.Contains(suggestedPriority)) return null;
             if (confidence < 0 || confidence > 1) confidence = Math.Clamp(confidence, 0, 1);
 
-            return new IncidentValidation(aiSuggested, missing, extra, suggestedPriority, confidence, reasoning);
+            return new IncidentValidation(aiSuggested, missing, extra, suggestedPriority, confidence, summary, reasoning);
         }
         catch
         {

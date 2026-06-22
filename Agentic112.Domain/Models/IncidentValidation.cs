@@ -6,5 +6,6 @@ public record IncidentValidation(
     List<string> ExtraServices,
     string SuggestedPriority,
     double Confidence,
+    string Summary,
     string Reasoning
 );

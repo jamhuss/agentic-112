@@ -73,7 +73,7 @@ public class AiGateway : IAiGateway
             $"AI classification failed after {_options.MaxRetries + 1} attempts for: \"{description}\"");
     }
 
-    public async Task<Agentic112.Domain.Models.IncidentValidation> ValidateAsync(string description, List<string>? userSelectedServices = null, string? userSelectedPriority = null)
+    public async Task<IncidentValidation> ValidateAsync(string description, List<string>? userSelectedServices = null, string? userSelectedPriority = null)
     {
         var userMessage = description;
 

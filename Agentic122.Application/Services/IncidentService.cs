@@ -109,19 +109,13 @@ public class IncidentService
 
             incident.Confidence = validation.Confidence;
 
-            var selectedServices = incident.Services;
             var aiSuggestedServices = validation.AiSuggestedServices ?? new List<string>();
             var missingServices = validation.MissingServices ?? new List<string>();
             var extraServices = validation.ExtraServices ?? new List<string>();
             var servicesMatch = missingServices.Count == 0 && extraServices.Count == 0;
 
-            var validationResult =
-                $"selectedServices: [{string.Join(", ", selectedServices)}], " +
-                $"aiSuggestedServices: [{string.Join(", ", aiSuggestedServices)}], " +
-                $"missing: [{string.Join(", ", missingServices)}], " +
-                $"extra: [{string.Join(", ", extraServices)}], " +
-                $"suggestedPriority: {validation.SuggestedPriority}, " +
-                $"servicesMatch: {servicesMatch}";
+            // AI produces the structured summary for this step
+            var validationResult = validation.Summary;
 
             var priorityMatch = incident.Priority == validation.SuggestedPriority;
 

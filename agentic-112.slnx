@@ -1,6 +1,10 @@
 <Solution>
   <Project Path="Agentic112.AI/Agentic112.AI.csproj" Id="677920fb-07e1-489c-b3da-6922d05edca3" />
   <Project Path="Agentic112.API/Agentic112.API.csproj" />
+  <Project Path="Agentic112.Client/Agentic112.Client.esproj">
+    <Build />
+    <Deploy />
+  </Project>
   <Project Path="Agentic112.Domain/Agentic112.Domain.csproj" Id="425bf046-099a-492c-85c3-1e93e730c2a6" />
   <Project Path="Agentic112.Infrastructure/Agentic112.Infrastructure.csproj" Id="433ed1eb-a4ce-43ab-8797-17b241eec123" />
   <Project Path="Agentic122.Application/Agentic122.Application.csproj" Id="3836c40f-fffe-43c0-ab9b-7b2864679d23" />
