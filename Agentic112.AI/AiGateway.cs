@@ -28,15 +28,6 @@ public class AiGateway : IAiGateway
     public async Task<IncidentAnalysis> AnalyzeAsync(string description, List<string>? userSelectedServices = null, string? userSelectedPriority = null)
     {
         var userMessage = description;
-        if (userSelectedServices is { Count: > 0 } || userSelectedPriority is not null)
-        {
-            var parts = new List<string>();
-            if (userSelectedServices is { Count: > 0 })
-                parts.Add($"Operatörens valda tjänster: [{string.Join(", ", userSelectedServices)}]");
-            if (userSelectedPriority is not null)
-                parts.Add($"Operatörens valda prioritet: {userSelectedPriority}");
-            userMessage += $"\n\n{string.Join(". ", parts)}. Granska om valen är korrekta.";
-        }
 
         var messages = new List<ChatMessage>
         {
