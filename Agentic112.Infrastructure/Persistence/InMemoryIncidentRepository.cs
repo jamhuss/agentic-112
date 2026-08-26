@@ -1,6 +1,7 @@
-
+using Agentic112.Application.Interfaces;
 using Agentic112.Domain.Entities;
-using Agentic122.Application.Interfaces;
+
+namespace Agentic112.Infrastructure.Persistence;
 
 public class InMemoryIncidentRepository : IIncidentRepository
 {

@@ -47,7 +47,7 @@ public static class ClassificationPrompt
           "properties": {
             "services": {
               "type": "array",
-              "items": { "type": "string", "enum": ["ambulance", "police", "fire_department", "assistance",""] }
+              "items": { "type": "string", "enum": ["ambulance", "police", "fire_department", "assistance"] }
             },
             "priority": {
               "type": "string",

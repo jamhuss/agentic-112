@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Agentic122.Application\Agentic122.Application.csproj" />
+    <ProjectReference Include="..\Agentic112.Application\Agentic112.Application.csproj" />
   </ItemGroup>
 
 </Project>

@@ -16,7 +16,6 @@
     <ProjectReference Include="..\Agentic112.AI\Agentic112.AI.csproj" />
     <ProjectReference Include="..\Agentic112.Domain\Agentic112.Domain.csproj" />
     <ProjectReference Include="..\Agentic112.Infrastructure\Agentic112.Infrastructure.csproj" />
-    <ProjectReference Include="..\Agentic122.Application\Agentic122.Application.csproj" />
   </ItemGroup>
 
 </Project>

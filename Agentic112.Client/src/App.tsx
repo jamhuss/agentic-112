@@ -26,7 +26,9 @@ function App() {
   }
 
   useEffect(() => {
-    loadIncidents();
+    (async () => {
+      await loadIncidents();
+    })();
   }, []);
 
   async function withLoading(setter: (v: boolean) => void, action: () => Promise<void>) {
@@ -91,25 +93,27 @@ function App() {
         )}
       </main>
 
-      <IncidentModal
-        open={modalOpen}
-        mode={isAgentic ? "agentic" : "create"}
-        onClose={() => { setModalOpen(false); setIsAgentic(false); }}
-        onCreate={handleCreate}
-        submitting={submitting}
-      />
+      {modalOpen && (
+        <IncidentModal
+          mode={isAgentic ? "agentic" : "create"}
+          onClose={() => { setModalOpen(false); setIsAgentic(false); }}
+          onCreate={handleCreate}
+          submitting={submitting}
+        />
+      )}
 
-      <IncidentModal
-        key={editingIncident?.id}
-        open={!!editingIncident}
-        mode="edit"
-        incident={editingIncident}
-        onClose={() => setEditingIncident(null)}
-        onUpdate={handleUpdate}
-        onValidate={handleValidate}
-        submitting={submitting}
-        validating={validating}
-      />
+      {editingIncident && (
+        <IncidentModal
+          key={editingIncident.id}
+          mode="edit"
+          incident={editingIncident}
+          onClose={() => setEditingIncident(null)}
+          onUpdate={handleUpdate}
+          onValidate={handleValidate}
+          submitting={submitting}
+          validating={validating}
+        />
+      )}
     </div>
   );
 }

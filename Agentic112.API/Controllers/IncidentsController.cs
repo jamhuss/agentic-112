@@ -2,8 +2,8 @@ namespace Agentic112.API.Controllers;
 
 using Agentic112.Domain.Constants;
 using Agentic112.Domain.DTOS;
-using Agentic122.Application.Interfaces;
-using Agentic122.Application.Services;
+using Agentic112.Application.Interfaces;
+using Agentic112.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
@@ -56,7 +56,7 @@ public class IncidentsController : ControllerBase
 
         // Manual edit only - no automatic AI validation here
         var descriptionChanged = request.Description is not null && request.Description != incident.Description;
-        var wasAiCreated = incident.CreatedBy == "AI";
+        var wasAiCreated = incident.CreatedBy == IncidentConstants.CreatedByAI;
         var contentChanged = request.Description is not null || request.Services is not null || request.Priority is not null;
 
         if (request.Services is not null) incident.Services = request.Services;
@@ -64,7 +64,7 @@ public class IncidentsController : ControllerBase
         if (request.Description is not null)
         {
             incident.Description = request.Description;
-            incident.CreatedBy = "User";
+            incident.CreatedBy = IncidentConstants.CreatedByUser;
         }
 
         // AI-ärende med ändrad beskrivning → kör om hela pipelinen automatiskt
@@ -80,7 +80,7 @@ public class IncidentsController : ControllerBase
             incident.Confidence = null;
             incident.Credibility = null;
             incident.NeedsHumanReview = null;
-            incident.Status = "pending_review";
+            incident.Status = IncidentConstants.StatusPendingReview;
         }
 
         if (request.Status is not null) incident.Status = request.Status;
@@ -100,7 +100,7 @@ public class IncidentsController : ControllerBase
         if (request.Description is not null)
         {
             incident.Description = request.Description;
-            incident.CreatedBy = "User";
+            incident.CreatedBy = IncidentConstants.CreatedByUser;
         }
 
         var result = await _incidentService.ValidateAsync(incident);

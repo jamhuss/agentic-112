@@ -1,6 +1,6 @@
 using Agentic112.Domain.Models;
 
-namespace Agentic122.Application.Interfaces;
+namespace Agentic112.Application.Interfaces;
 
 public interface ICredibilityGateway
 {

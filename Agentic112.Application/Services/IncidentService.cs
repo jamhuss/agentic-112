@@ -1,29 +1,18 @@
+using Agentic112.Domain.Constants;
 using Agentic112.Domain.Entities;
 using Agentic112.Domain.Models;
-using Agentic122.Application.Interfaces;
+using Agentic112.Application.Interfaces;
 using Microsoft.Extensions.Logging;
 
 
-namespace Agentic122.Application.Services;
+namespace Agentic112.Application.Services;
 
-public class IncidentService
-{
-    private readonly IAiGateway _ai;
-    private readonly ICredibilityGateway _credibility;
-    private readonly IIncidentRepository _repo;
-    private readonly ILogger<IncidentService> _logger;
-
-    public IncidentService(
+public class IncidentService(
         IAiGateway ai,
         ICredibilityGateway credibility,
         IIncidentRepository repo,
         ILogger<IncidentService> logger)
-    {
-        _ai = ai;
-        _credibility = credibility;
-        _repo = repo;
-        _logger = logger;
-    }
+{
 
     public async Task<Incident> CreateManualAsync(
         string description,
@@ -36,12 +25,12 @@ public class IncidentService
             Description = description,
             Services = services,
             Priority = priority,
-            Status = "ongoing",
-            CreatedBy = "User",
+            Status = IncidentConstants.StatusOngoing,
+            CreatedBy = IncidentConstants.CreatedByUser,
             CreatedAt = DateTime.UtcNow
         };
 
-        await _repo.SaveAsync(incident);
+        await repo.SaveAsync(incident);
 
         return incident;
     }
@@ -52,22 +41,22 @@ public class IncidentService
         {
             Id = Guid.NewGuid(),
             Description = description,
-            Services = new List<string>(),
-            Priority = "Low",
-            CreatedBy = "AI",
+            Services = [],
+            Priority = IncidentConstants.PriorityLow,
+            CreatedBy = IncidentConstants.CreatedByAI,
             CreatedAt = DateTime.UtcNow
         };
 
         try
         {
-            var analysis = await _ai.AnalyzeAsync(description);
+            var analysis = await ai.AnalyzeAsync(description);
 
             incident.Services = analysis.Services;
             incident.Priority = analysis.Priority;
             incident.Confidence = analysis.Confidence;
 
             incident.Steps.Add(new PipelineStep(
-                "classification",
+                IncidentConstants.StepClassification,
                 $"services: [{string.Join(", ", analysis.Services)}], priority: {analysis.Priority}, confidence: {analysis.Confidence}",
                 analysis.Reasoning,
                 DateTime.UtcNow
@@ -75,25 +64,17 @@ public class IncidentService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Classification failed for AI incident");
+            logger.LogError(ex, "Classification failed for AI incident");
 
-            incident.NeedsHumanReview = true;
-            incident.Status = "flagged";
+            FlagForHumanReview(incident, IncidentConstants.StepClassification, $"Classification failed: {ex.Message}");
 
-            incident.Steps.Add(new PipelineStep(
-                "classification",
-                "ERROR",
-                $"Klassificering misslyckades: {ex.Message}",
-                DateTime.UtcNow
-            ));
-
-            await _repo.SaveAsync(incident);
+            await repo.SaveAsync(incident);
             return incident;
         }
 
-        await _repo.SaveAsync(incident);
+        await repo.SaveAsync(incident);
         await RunCredibilityCheck(incident);
-        await _repo.UpdateAsync(incident);
+        await repo.UpdateAsync(incident);
 
         return incident;
     }
@@ -105,13 +86,13 @@ public class IncidentService
         try
         {
             // Use AI's validation response which includes suggested services and explicit missing/extra lists
-            var validation = await _ai.ValidateAsync(incident.Description, incident.Services, incident.Priority);
+            var validation = await ai.ValidateAsync(incident.Description, incident.Services, incident.Priority);
 
             incident.Confidence = validation.Confidence;
 
-            var aiSuggestedServices = validation.AiSuggestedServices ?? new List<string>();
-            var missingServices = validation.MissingServices ?? new List<string>();
-            var extraServices = validation.ExtraServices ?? new List<string>();
+            var aiSuggestedServices = validation.AiSuggestedServices ?? [];
+            var missingServices = validation.MissingServices ?? [];
+            var extraServices = validation.ExtraServices ?? [];
             var servicesMatch = missingServices.Count == 0 && extraServices.Count == 0;
 
             // AI produces the structured summary for this step
@@ -136,7 +117,7 @@ public class IncidentService
             }
 
             incident.Steps.Add(new PipelineStep(
-                "classification_validation",
+                IncidentConstants.StepClassificationValidation,
                 validationResult,
                 validationReasoning,
                 DateTime.UtcNow
@@ -144,28 +125,20 @@ public class IncidentService
 
             await RunCredibilityCheck(incident);
 
-            if (aiSuggestedServices.Count == 0 || !servicesMatch || !priorityMatch || incident.Credibility != "high")
+            if (aiSuggestedServices.Count == 0 || !servicesMatch || !priorityMatch || incident.Credibility != IncidentConstants.CredibilityHigh)
             {
                 incident.NeedsHumanReview = true;
-                incident.Status = "flagged";
+                incident.Status = IncidentConstants.StatusFlagged;
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Validation failed for incident {Id}", incident.Id);
+            logger.LogError(ex, "Validation failed for incident {Id}", incident.Id);
 
-            incident.NeedsHumanReview = true;
-            incident.Status = "flagged";
-
-            incident.Steps.Add(new PipelineStep(
-                "classification_validation",
-                "ERROR",
-                $"Validering misslyckades: {ex.Message}",
-                DateTime.UtcNow
-            ));
+            FlagForHumanReview(incident, IncidentConstants.StepClassificationValidation, $"Validation failed: {ex.Message}");
         }
 
-        await _repo.UpdateAsync(incident);
+        await repo.UpdateAsync(incident);
 
         return incident;
     }
@@ -174,7 +147,7 @@ public class IncidentService
     {
         try
         {
-            var assessment = await _credibility.AssessAsync(
+            var assessment = await credibility.AssessAsync(
                 incident.Description,
                 incident.Services,
                 incident.Priority,
@@ -184,7 +157,7 @@ public class IncidentService
             incident.NeedsHumanReview = assessment.NeedsHumanReview;
 
             incident.Steps.Add(new PipelineStep(
-                "credibility_check",
+                IncidentConstants.StepCredibilityCheck,
                 $"credibility: {assessment.Credibility}, needsHumanReview: {assessment.NeedsHumanReview}",
                 assessment.Reasoning,
                 DateTime.UtcNow
@@ -194,18 +167,9 @@ public class IncidentService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Credibility check failed for incident {Id}", incident.Id);
+            logger.LogError(ex, "Credibility check failed for incident {Id}", incident.Id);
 
-            incident.Credibility = null;
-            incident.NeedsHumanReview = true;
-            incident.Status = "flagged";
-
-            incident.Steps.Add(new PipelineStep(
-                "credibility_check",
-                "ERROR",
-                $"Trovärdighetskontroll misslyckades: {ex.Message}",
-                DateTime.UtcNow
-            ));
+            FlagForHumanReview(incident, IncidentConstants.StepCredibilityCheck, $"Credibility check failed: {ex.Message}");
         }
     }
 
@@ -215,11 +179,24 @@ public class IncidentService
 
         return credibility switch
         {
-            "high" => "ongoing",
-            "medium" when effectiveConfidence >= 0.6 => "ongoing",
-            "medium" => "flagged",
-            "low" => "flagged",
-            _ => "flagged"
+            IncidentConstants.CredibilityHigh => IncidentConstants.StatusOngoing,
+            IncidentConstants.CredibilityMedium when effectiveConfidence >= 0.6 => IncidentConstants.StatusOngoing,
+            IncidentConstants.CredibilityMedium => IncidentConstants.StatusFlagged,
+            IncidentConstants.CredibilityLow => IncidentConstants.StatusFlagged,
+            _ => IncidentConstants.StatusFlagged
         };
+    }
+
+    private static void FlagForHumanReview(Incident incident, string flagName, string reason)
+    {
+        incident.Credibility = null;
+        incident.NeedsHumanReview = true;
+        incident.Status = IncidentConstants.StatusFlagged;
+        incident.Steps.Add(new PipelineStep(
+            flagName,
+            "ERROR",
+            reason,
+            DateTime.UtcNow
+        ));
     }
 }

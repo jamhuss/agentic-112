@@ -1,6 +1,8 @@
+using Agentic112.AI;
 using Agentic112.AI.Configuration;
-using Agentic122.Application.Interfaces;
-using Agentic122.Application.Services;
+using Agentic112.Application.Interfaces;
+using Agentic112.Application.Services;
+using Agentic112.Infrastructure.Persistence;
 using Azure.AI.OpenAI;
 using Azure.Core;
 using Azure.Identity;
@@ -38,7 +40,14 @@ builder.Services.AddCors(options =>
 var aiSection = builder.Configuration.GetSection("AI");
 builder.Services.Configure<AiOptions>(aiSection);
 
-var aiOptions = aiSection.Get<AiOptions>()!;
+var aiOptions = aiSection.Get<AiOptions>()
+    ?? throw new InvalidOperationException("Konfigurationssektionen 'AI' saknas.");
+
+if (string.IsNullOrWhiteSpace(aiOptions.AzureOpenAIEndpoint))
+    throw new InvalidOperationException("'AI:AzureOpenAIEndpoint' är inte konfigurerad.");
+
+if (string.IsNullOrWhiteSpace(aiOptions.Model))
+    throw new InvalidOperationException("'AI:Model' är inte konfigurerad.");
 
 // Keyless authentication: DefaultAzureCredential locally (VS/Azure CLI login),
 // ManagedIdentityCredential in Azure App Service for faster, predictable auth.
@@ -48,8 +57,7 @@ TokenCredential credential = builder.Environment.IsDevelopment()
         ? new ManagedIdentityCredential()
         : new ManagedIdentityCredential(aiOptions.ManagedIdentityClientId);
 
-// Talk directly to the Azure OpenAI endpoint using the GA AzureOpenAIClient
-// (stable, keyless auth via TokenCredential — no experimental APIs).
+// Talk directly to the Azure OpenAI endpoint using the AzureOpenAIClient
 var azureClient = new AzureOpenAIClient(new Uri(aiOptions.AzureOpenAIEndpoint), credential);
 
 builder.Services.AddSingleton<IChatClient>(

@@ -1,6 +1,6 @@
 using Agentic112.Domain.Entities;
 
-namespace Agentic122.Application.Interfaces;
+namespace Agentic112.Application.Interfaces;
 
 public interface IIncidentRepository
 {

@@ -1,12 +1,15 @@
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
-using Agentic112.Domain.Models;
-using Agentic122.Application.Interfaces;
 using Agentic112.AI.Configuration;
 using Agentic112.AI.Prompts;
 using Agentic112.AI.Parsing;
 using Microsoft.Extensions.Logging;
+using Agentic112.Application.Interfaces;
+using Agentic112.Domain.Models;
+using Agentic112.Domain.Constants;
+
+namespace Agentic112.AI;
 
 public class AiGateway : IAiGateway
 {
@@ -25,7 +28,7 @@ public class AiGateway : IAiGateway
         _logger = logger;
     }
 
-    public async Task<IncidentAnalysis> AnalyzeAsync(string description, List<string>? userSelectedServices = null, string? userSelectedPriority = null)
+    public async Task<IncidentAnalysis> AnalyzeAsync(string description)
     {
         var userMessage = description;
 
@@ -40,7 +43,7 @@ public class AiGateway : IAiGateway
             Temperature = (float)_options.Temperature,
             ResponseFormat = ChatResponseFormat.ForJsonSchema(
                 SchemaElement,
-                "classification")
+                IncidentConstants.StepClassification)
         };
 
         for (int attempt = 0; attempt <= _options.MaxRetries; attempt++)
@@ -87,7 +90,7 @@ public class AiGateway : IAiGateway
             Temperature = (float)_options.Temperature,
             ResponseFormat = ChatResponseFormat.ForJsonSchema(
                 ValidationSchemaElement,
-                "validation")
+                IncidentConstants.StepValidation)
         };
 
         for (int attempt = 0; attempt <= _options.MaxRetries; attempt++)
@@ -103,7 +106,7 @@ public class AiGateway : IAiGateway
                 return result;
             }
 
-            _logger.LogWarning("Validation validation failed on attempt {Attempt}", attempt);
+            _logger.LogWarning("Validation failed on attempt {Attempt}", attempt);
         }
 
         throw new InvalidOperationException(

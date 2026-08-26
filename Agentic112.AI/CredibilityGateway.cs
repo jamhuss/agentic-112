@@ -3,11 +3,14 @@ using System.Text.Json;
 using Agentic112.AI.Configuration;
 using Agentic112.AI.Prompts;
 using Agentic112.AI.Parsing;
-using Agentic122.Application.Interfaces;
+using Agentic112.Application.Interfaces;
 using Microsoft.Extensions.Logging;
 using Agentic112.Domain.Models;
+using Agentic112.Domain.Constants;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.AI;
+
+namespace Agentic112.AI;
 
 public class CredibilityGateway : ICredibilityGateway
 {
@@ -48,7 +51,7 @@ public class CredibilityGateway : ICredibilityGateway
             Temperature = (float)_options.Temperature,
             ResponseFormat = ChatResponseFormat.ForJsonSchema(
                 SchemaElement,
-                "credibility_assessment")
+                IncidentConstants.SchemaCredibilityAssessment)
         };
 
         for (int attempt = 0; attempt <= _options.MaxRetries; attempt++)
